@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuits Magiques - Harry Potter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === STRUCTURE === */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Cinzel', serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #FFD700;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 { text-align: center; text-shadow: 0 0 10px #FFD700; margin-bottom: 20px; }
+
+        /* === CONTENEUR === */
+        .canvas-wrapper {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 20px auto;
+            background: rgba(44, 24, 16, 0.8);
+            border: 3px solid #8B7355;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* LE CANVAS : Ne doit pas bloquer les clics */
+        #wireCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            pointer-events: none; 
+        }
+
+        /* LES PORTS : Doivent être au-dessus et cliquables */
+        .port {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid #000;
+            cursor: pointer;
+            z-index: 100;
+            pointer-events: auto;
+            transition: transform 0.2s ease;
+        }
+        .port:hover { transform: scale(1.3); box-shadow: 0 0 15px #FFD700; }
+        .port.output { background: linear-gradient(135deg, #FFD700, #FFA500); }
+        .port.input { background: linear-gradient(135deg, #4A90E2, #2E5C8A); }
+
+        /* ANIMATION PULSE */
+        .port.selected {
+            animation: pulseMagique 0.8s infinite alternate;
+            box-shadow: 0 0 25px #FFD700;
+            border-color: white;
+        }
+        @keyframes pulseMagique {
+            from { transform: scale(1.2); }
+            to { transform: scale(1.5); }
+        }
+
+        .port-label { position: absolute; font-size: 10px; pointer-events: none; font-weight: bold; }
+
+        /* BOUTONS */
+        .controls { display: flex; justify-content: center; gap: 15px; margin: 20px; }
+        button {
+            background: #5C4033; border: 2px solid #FFD700; color: #FFD700;
+            padding: 10px 20px; border-radius: 5px; cursor: pointer; font-family: 'Cinzel';
+        }
+        button.active { background: #FF4444; color: white; }
+        .info-panel { text-align: center; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; max-width: 600px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>⚡ Circuits Magiques ⚡</h1>
+        
+        <div class="canvas-wrapper">
+            <canvas id="wireCanvas" width="800" height="600"></canvas>
+            
+            <div class="port output" data-id="p1" data-type="output" style="left: 100px; top: 100px;"></div>
+            <span class="port-label" style="left: 95px; top: 80px;">OUT 1</span>
+
+            <div class="port input" data-id="p2" data-type="input" style="left: 400px; top: 100px;"></div>
+            <span class="port-label" style="left: 395px; top: 80px;">IN 1</span>
+
+            <div class="port output" data-id="p3" data-type="output" style="left: 100px; top: 300px;"></div>
+            <div class="port input" data-id="p4" data-type="input" style="left: 400px; top: 300px;"></div>
+        </div>
+
+        <div class="controls">
+            <button id="clearWiresBtn">🗑️ Effacer tout</button>
+            <button id="deleteWireBtn">✂️ Mode Suppression</button>
+            <div style="line-height: 40px;">Fils : <span id="wireCount">0</span></div>
+        </div>
+
+        <div class="info-panel">
+            <p>Cliquez sur un port <b>Jaune</b> puis sur un <b>Bleu</b> pour tisser un lien magique.</p>
+        </div>
+    </div>
+
+    <script src="js/wireValidator.js"></script>
+    <script src="js/wireRenderer.js"></script>
+    <script src="js/wireSystem.js"></script>
+    
+    <script>
+        const canvas = document.getElementById('wireCanvas');
+        const wrapper = document.querySelector('.canvas-wrapper');
+        const wireRenderer = new WireRenderer(canvas);
+        const wireSystem = new WireSystem(canvas);
+        window.wireSystem = wireSystem;
+
+        // Liaison Système -> Rendu
+        wireSystem.onRender = (wires, currentWire) => {
+            wireRenderer.drawAllWires(wires, currentWire);
+        };
+
+        // Liaison Système -> DOM
+        wireSystem.getAllPorts = function() {
+            const rect = canvas.getBoundingClientRect();
+            return Array.from(document.querySelectorAll('.port')).map(el => {
+                const pRect = el.getBoundingClientRect();
+                return {
+                    id: el.dataset.id,
+                    type: el.dataset.type,
+                    x: pRect.left - rect.left + pRect.width / 2,
+                    y: pRect.top - rect.top + pRect.height / 2,
+                    element: el
+                };
+            });
+        };
+
+        // ÉCOUTEURS D'ÉVÉNEMENTS SUR LE WRAPPER (car le canvas est transparent aux clics)
+        wrapper.addEventListener('click', (e) => wireSystem.handleClick(e));
+        wrapper.addEventListener('mousemove', (e) => wireSystem.handleMouseMove(e));
+
+        // MODE SUPPRESSION
+        let isDeleting = false;
+        const deleteBtn = document.getElementById('deleteWireBtn');
+        deleteBtn.addEventListener('click', () => {
+            isDeleting = !isDeleting;
+            wireSystem.setDeleteMode(isDeleting);
+            deleteBtn.classList.toggle('active', isDeleting);
+            deleteBtn.textContent = isDeleting ? '🟢 Mode Normal' : '✂️ Mode Suppression';
+        });
+
+        // EFFACER TOUT
+        document.getElementById('clearWiresBtn').onclick = () => {
+            wireSystem.clearAll();
+            updateCounter();
+        };
+
+        function updateCounter() {
+            document.getElementById('wireCount').textContent = wireSystem.getWires().length;
+        }
+
+        canvas.addEventListener('wireCreated', updateCounter);
+        canvas.addEventListener('wireRemoved', updateCounter);
+
+        // LANCEMENT
+        wireRenderer.startAnimation();
+    </script>
+</body>
+</html>
