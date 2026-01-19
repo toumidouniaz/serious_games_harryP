@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système Glisser-Déposer - Portes Logiques</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Système de Glisser-Déposer - Portes Logiques ⚡</h1>
+        
+        <div class="game-area">
+            <div class="palette">
+                <h2>🔮 Palette de Portes</h2>
+                <div class="gate-item" data-gate-type="AND">
+                    <div class="gate-icon">⚡</div>
+                    <div class="gate-name">Porte AND</div>
+                </div>
+                <div class="gate-item" data-gate-type="OR">
+                    <div class="gate-icon">🌟</div>
+                    <div class="gate-name">Porte OR</div>
+                </div>
+                <div class="gate-item" data-gate-type="NOT">
+                    <div class="gate-icon">🔄</div>
+                    <div class="gate-name">Porte NOT</div>
+                </div>
+                <div class="gate-item" data-gate-type="XOR">
+                    <div class="gate-icon">✨</div>
+                    <div class="gate-name">Porte XOR</div>
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <div id="canvas"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="clearCanvas()">🗑️ Effacer tout</button>
+            <button class="btn" onclick="saveLayout()">💾 Sauvegarder</button>
+            <button class="btn" onclick="loadLayout()">📂 Charger</button>
+            <button class="btn" onclick="exportData()">📊 Exporter données</button>
+        </div>
+
+        <div class="info">
+            <strong>📜 Instructions:</strong>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>Glissez les portes de la palette vers le canvas</li>
+                <li>Déplacez les portes sur le canvas</li>
+                <li>Survolez une porte pour voir le bouton de suppression</li>
+                <li>Les portes ne peuvent pas se chevaucher</li>
+                <li>Support tactile pour mobile et tablette</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
