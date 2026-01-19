@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuit Calculator - Harry Potter Logic Game</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #f1f1f1;
+            font-family: 'Garamond', serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .magical-container {
+            background: rgba(30, 30, 60, 0.9);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+        }
+
+        .gate-card {
+            background: rgba(60, 60, 100, 0.6);
+            border: 1px solid #8b7355;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+
+        .gate-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .gate-active {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: #d4af37;
+        }
+
+        .gate-value-1 {
+            color: #4ecca3;
+            text-shadow: 0 0 10px #4ecca3;
+        }
+
+        .gate-value-0 {
+            color: #e74c3c;
+            text-shadow: 0 0 10px #e74c3c;
+        }
+
+        .btn-magical {
+            background: linear-gradient(45deg, #8b7355, #d4af37);
+            border: none;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-magical:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.5);
+        }
+
+        .connection-line {
+            stroke: #d4af37;
+            stroke-width: 2;
+            fill: none;
+            filter: drop-shadow(0 0 5px #d4af37);
+        }
+
+        .output-display {
+            font-size: 2em;
+            font-weight: bold;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .cycle-warning {
+            background: rgba(231, 76, 60, 0.2);
+            border: 2px solid #e74c3c;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .truth-table {
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .truth-table td {
+            padding: 5px 10px;
+            border: 1px solid #8b7355;
+        }
+
+        .sparkle {
+            animation: sparkle 1s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.7;
+                transform: scale(1.1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="magical-container">
+            <h1 class="text-center mb-4" style="color: #d4af37; text-shadow: 0 0 10px #d4af37;">
+                ⚡ Calculateur de Circuit Magique ⚡
+            </h1>
+
+            <!-- Section de démonstration -->
+            <div class="row">
+                <div class="col-md-6">
+                    <h3 class="mb-3">🔮 Configuration du Circuit</h3>
+
+                    <div class="gate-card">
+                        <h5>Portes Logiques Disponibles</h5>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <button class="btn btn-magical btn-sm" onclick="demo.addTestGate('AND')">+ AND</button>
+                            <button class="btn btn-magical btn-sm" onclick="demo.addTestGate('OR')">+ OR</button>
+                            <button class="btn btn-magical btn-sm" onclick="demo.addTestGate('XOR')">+ XOR</button>
+                            <button class="btn btn-magical btn-sm" onclick="demo.addTestGate('NOT')">+ NOT</button>
+                        </div>
+                    </div>
+
+                    <div class="gate-card">
+                        <h5>Entrées du Circuit</h5>
+                        <div class="mb-2">
+                            <label>Input A:</label>
+                            <button class="btn btn-sm ms-2" onclick="demo.toggleInput('input_a')" id="btn_input_a">
+                                <span id="val_input_a">0</span>
+                            </button>
+                        </div>
+                        <div class="mb-2">
+                            <label>Input B:</label>
+                            <button class="btn btn-sm ms-2" onclick="demo.toggleInput('input_b')" id="btn_input_b">
+                                <span id="val_input_b">0</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="gate-card">
+                        <h5>Exemples Prédéfinis</h5>
+                        <button class="btn btn-magical btn-sm me-2" onclick="demo.loadExample('simple')">Simple
+                            AND</button>
+                        <button class="btn btn-magical btn-sm me-2"
+                            onclick="demo.loadExample('complex')">Multi-portes</button>
+                        <button class="btn btn-magical btn-sm" onclick="demo.loadExample('cycle')">Avec Cycle</button>
+                    </div>
+
+                    <button class="btn btn-danger w-100 mt-3" onclick="demo.reset()">🔄 Réinitialiser</button>
+                </div>
+
+                <div class="col-md-6">
+                    <h3 class="mb-3">✨ Résultats du Circuit</h3>
+
+                    <div id="cycleWarning" class="cycle-warning" style="display: none;">
+                        ⚠️ CYCLE DÉTECTÉ dans le circuit!
+                    </div>
+
+                    <div class="output-display" id="outputDisplay">
+                        <div>Sortie Finale: <span id="finalOutput" class="sparkle">-</span></div>
+                    </div>
+
+                    <div class="gate-card">
+                        <h5>État des Portes</h5>
+                        <div id="gatesStatus"></div>
+                    </div>
+
+                    <div class="gate-card">
+                        <h5>Connexions Active</h5>
+                        <div id="connectionsStatus"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tables de vérité -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h3 class="mb-3">📚 Tables de Vérité</h3>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="gate-card">
+                                <h6>AND (ET)</h6>
+                                <table class="truth-table w-100">
+                                    <tr>
+                                        <td>A</td>
+                                        <td>B</td>
+                                        <td>Out</td>
+                                    </tr>
+                                    <tr>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>0</td>
+                                        <td>1</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>1</td>
+                                        <td class="gate-value-1">1</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="gate-card">
+                                <h6>OR (OU)</h6>
+                                <table class="truth-table w-100">
+                                    <tr>
+                                        <td>A</td>
+                                        <td>B</td>
+                                        <td>Out</td>
+                                    </tr>
+                                    <tr>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>0</td>
+                                        <td>1</td>
+                                        <td class="gate-value-1">1</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>0</td>
+                                        <td class="gate-value-1">1</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>1</td>
+                                        <td class="gate-value-1">1</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="gate-card">
+                                <h6>XOR (OU Exclusif)</h6>
+                                <table class="truth-table w-100">
+                                    <tr>
+                                        <td>A</td>
+                                        <td>B</td>
+                                        <td>Out</td>
+                                    </tr>
+                                    <tr>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>0</td>
+                                        <td>1</td>
+                                        <td class="gate-value-1">1</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>0</td>
+                                        <td class="gate-value-1">1</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>1</td>
+                                        <td>0</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="gate-card">
+                                <h6>NOT (Inverseur)</h6>
+                                <table class="truth-table w-100">
+                                    <tr>
+                                        <td>A</td>
+                                        <td>Out</td>
+                                    </tr>
+                                    <tr>
+                                        <td>0</td>
+                                        <td class="gate-value-1">1</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>0</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ============================================
+        // CALCULATEUR DE CIRCUIT - CLASSE PRINCIPALE
+        // ============================================
+
+        class CircuitCalculator {
+            constructor() {
+                this.gates = new Map();
+                this.connections = [];
+                this.cache = new Map();
+                this.gateCounter = 0;
+            }
+
+            // === GESTION DES PORTES ===
+
+            addGate(type, value = null) {
+                const gateId = `gate_${this.gateCounter++}`;
+                this.gates.set(gateId, {
+                    id: gateId,
+                    type: type,
+                    value: value
+                });
+                this.clearCache();
+                return gateId;
+            }
+
+            removeGate(gateId) {
+                this.gates.delete(gateId);
+                this.connections = this.connections.filter(
+                    conn => conn.from !== gateId && conn.to !== gateId
+                );
+                this.clearCache();
+            }
+
+            setGateValue(gateId, value) {
+                const gate = this.gates.get(gateId);
+                if (gate) {
+                    gate.value = value;
+                    this.clearCache();
+                }
+            }
+
+            // === GESTION DES CONNEXIONS ===
+
+            addConnection(fromGateId, toGateId) {
+                this.connections.push({
+                    from: fromGateId,
+                    to: toGateId
+                });
+                this.clearCache();
+            }
+
+            removeConnection(fromGateId, toGateId) {
+                this.connections = this.connections.filter(
+                    conn => !(conn.from === fromGateId && conn.to === toGateId)
+                );
+                this.clearCache();
+            }
+
+            clearCache() {
+                this.cache.clear();
+            }
+
+            // === OPÉRATIONS BINAIRES ===
+
+            calculateAND(inputs) {
+                if (inputs.length === 0) return 0;
+                return inputs.every(val => val === 1) ? 1 : 0;
+            }
+
+            calculateOR(inputs) {
+                if (inputs.length === 0) return 0;
+                return inputs.some(val => val === 1) ? 1 : 0;
+            }
+
+            calculateXOR(inputs) {
+                if (inputs.length === 0) return 0;
+                return inputs.reduce((acc, val) => acc ^ val, 0);
+            }
+
+            calculateNOT(inputs) {
+                if (inputs.length === 0) return 0;
+                return inputs[0] === 1 ? 0 : 1;
+            }
+
+            // === CALCUL DES VALEURS ===
+
+            calculateGateValue(gate, inputValues) {
+                switch (gate.type) {
+                    case 'AND':
+                        return this.calculateAND(inputValues);
+                    case 'OR':
+                        return this.calculateOR(inputValues);
+                    case 'XOR':
+                        return this.calculateXOR(inputValues);
+                    case 'NOT':
+                        return this.calculateNOT(inputValues);
+                    case 'INPUT':
+                        return gate.value !== null ? gate.value : 0;
+                    case 'OUTPUT':
+                        return inputValues.length > 0 ? inputValues[0] : 0;
+                    default:
+                        return 0;
+                }
+            }
+
+            // === DÉTECTION DE CYCLES ===
+
+            detectCycle(startGateId, visited = new Set(), recStack = new Set()) {
+                visited.add(startGateId);
+                recStack.add(startGateId);
+
+                const outgoing = this.connections.filter(conn => conn.from === startGateId);
+
+                for (const conn of outgoing) {
+                    const nextGate = conn.to;
+
+                    if (!visited.has(nextGate)) {
+                        if (this.detectCycle(nextGate, visited, recStack)) {
+                            return true;
+                        }
+                    } else if (recStack.has(nextGate)) {
+                        return true;
+                    }
+                }
+
+                recStack.delete(startGateId);
+                return false;
+            }
+
+            hasCycles() {
+                const visited = new Set();
+
+                for (const [gateId] of this.gates) {
+                    if (!visited.has(gateId)) {
+                        if (this.detectCycle(gateId, visited, new Set())) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            // === TRAVERSÉE DU CIRCUIT ===
+
+            getInputGates(gateId) {
+                return this.connections
+                    .filter(conn => conn.to === gateId)
+                    .map(conn => conn.from);
+            }
+
+            calculateGateRecursive(gateId, visitStack = new Set()) {
+                // Vérifier le cache
+                if (this.cache.has(gateId)) {
+                    return this.cache.get(gateId);
+                }
+
+                const gate = this.gates.get(gateId);
+                if (!gate) return 0;
+
+                // Portes d'entrée
+                if (gate.type === 'INPUT') {
+                    const value = gate.value !== null ? gate.value : 0;
+                    this.cache.set(gateId, value);
+                    return value;
+                }
+
+                // Détection de cycle
+                if (visitStack.has(gateId)) {
+                    console.warn(`Cycle détecté à ${gateId}`);
+                    return 0;
+                }
+
+                visitStack.add(gateId);
+
+                // Obtenir les portes d'entrée
+                const inputGates = this.getInputGates(gateId);
+
+                // Gérer portes déconnectées
+                if (inputGates.length === 0 && gate.type !== 'INPUT') {
+                    this.cache.set(gateId, 0);
+                    visitStack.delete(gateId);
+                    return 0;
+                }
+
+                // Calculer récursivement
+                const inputValues = inputGates.map(inputGateId =>
+                    this.calculateGateRecursive(inputGateId, new Set(visitStack))
+                );
+
+                const output = this.calculateGateValue(gate, inputValues);
+
+                this.cache.set(gateId, output);
+                visitStack.delete(gateId);
+
+                return output;
+            }
+
+            // === CALCUL EN TEMPS RÉEL ===
+
+            calculateAll() {
+                this.clearCache();
+
+                const result = {
+                    outputs: new Map(),
+                    allGates: new Map(),
+                    hasCycles: this.hasCycles()
+                };
+
+                // Calculer toutes les portes
+                for (const [gateId, gate] of this.gates) {
+                    const value = this.calculateGateRecursive(gateId);
+                    result.allGates.set(gateId, value);
+
+                    if (gate.type === 'OUTPUT') {
+                        result.outputs.set(gateId, value);
+                    }
+                }
+
+                return result;
+            }
+
+            // === UTILITAIRES ===
+
+            getGateInfo(gateId) {
+                const gate = this.gates.get(gateId);
+                if (!gate) return null;
+
+                const inputs = this.getInputGates(gateId);
+                const value = this.calculateGateRecursive(gateId);
+
+                return {
+                    ...gate,
+                    inputs: inputs,
+                    calculatedValue: value
+                };
+            }
+
+            reset() {
+                this.gates.clear();
+                this.connections = [];
+                this.cache.clear();
+                this.gateCounter = 0;
+            }
+        }
+
+        // ============================================
+        // DÉMO INTERACTIVE
+        // ============================================
+
+        class Demo {
+            constructor() {
+                this.calculator = new CircuitCalculator();
+                this.inputA = null;
+                this.inputB = null;
+                this.output = null;
+                this.init();
+            }
+
+            init() {
+                // Créer des entrées par défaut
+                this.inputA = this.calculator.addGate('INPUT', 0);
+                this.inputB = this.calculator.addGate('INPUT', 0);
+                this.output = this.calculator.addGate('OUTPUT');
+                this.update();
+            }
+
+            toggleInput(inputName) {
+                const gateId = inputName === 'input_a' ? this.inputA : this.inputB;
+                const gate = this.calculator.gates.get(gateId);
+                const newValue = gate.value === 1 ? 0 : 1;
+                this.calculator.setGateValue(gateId, newValue);
+                this.update();
+            }
+
+            addTestGate(type) {
+                const gateId = this.calculator.addGate(type);
+
+                // Connecter automatiquement pour la démo
+                if (type === 'NOT') {
+                    this.calculator.addConnection(this.inputA, gateId);
+                } else {
+                    this.calculator.addConnection(this.inputA, gateId);
+                    this.calculator.addConnection(this.inputB, gateId);
+                }
+                this.calculator.addConnection(gateId, this.output);
+
+                this.update();
+            }
+
+            loadExample(exampleType) {
+                this.calculator.reset();
+
+                if (exampleType === 'simple') {
+                    this.inputA = this.calculator.addGate('INPUT', 1);
+                    this.inputB = this.calculator.addGate('INPUT', 1);
+                    const andGate = this.calculator.addGate('AND');
+                    this.output = this.calculator.addGate('OUTPUT');
+
+                    this.calculator.addConnection(this.inputA, andGate);
+                    this.calculator.addConnection(this.inputB, andGate);
+                    this.calculator.addConnection(andGate, this.output);
+
+                } else if (exampleType === 'complex') {
+                    this.inputA = this.calculator.addGate('INPUT', 1);
+                    this.inputB = this.calculator.addGate('INPUT', 0);
+                    const orGate = this.calculator.addGate('OR');
+                    const notGate = this.calculator.addGate('NOT');
+                    const andGate = this.calculator.addGate('AND');
+                    this.output = this.calculator.addGate('OUTPUT');
+
+                    this.calculator.addConnection(this.inputA, orGate);
+                    this.calculator.addConnection(this.inputB, orGate);
+                    this.calculator.addConnection(orGate, notGate);
+                    this.calculator.addConnection(notGate, andGate);
+                    this.calculator.addConnection(this.inputA, andGate);
+                    this.calculator.addConnection(andGate, this.output);
+
+                } else if (exampleType === 'cycle') {
+                    this.inputA = this.calculator.addGate('INPUT', 1);
+                    const gate1 = this.calculator.addGate('AND');
+                    const gate2 = this.calculator.addGate('OR');
+                    this.output = this.calculator.addGate('OUTPUT');
+
+                    // Créer un cycle
+                    this.calculator.addConnection(this.inputA, gate1);
+                    this.calculator.addConnection(gate1, gate2);
+                    this.calculator.addConnection(gate2, gate1); // Cycle!
+                    this.calculator.addConnection(gate2, this.output);
+                }
+
+                this.update();
+            }
+
+            reset() {
+                this.init();
+            }
+
+            update() {
+                const result = this.calculator.calculateAll();
+
+                // Mettre à jour l'affichage des entrées
+                const inputAVal = this.calculator.gates.get(this.inputA).value;
+                const inputBVal = this.calculator.gates.get(this.inputB).value;
+
+                document.getElementById('val_input_a').textContent = inputAVal;
+                document.getElementById('val_input_b').textContent = inputBVal;
+
+                const btnA = document.getElementById('btn_input_a');
+                const btnB = document.getElementById('btn_input_b');
+                btnA.className = `btn btn-sm ms-2 ${inputAVal === 1 ? 'btn-success' : 'btn-secondary'}`;
+                btnB.className = `btn btn-sm ms-2 ${inputBVal === 1 ? 'btn-success' : 'btn-secondary'}`;
+
+                // Afficher la sortie finale
+                const outputValue = result.outputs.get(this.output);
+                const finalOutputEl = document.getElementById('finalOutput');
+                finalOutputEl.textContent = outputValue !== undefined ? outputValue : '-';
+                finalOutputEl.className = outputValue === 1 ? 'gate-value-1 sparkle' : outputValue === 0 ? 'gate-value-0' : '';
+
+                // Avertissement de cycle
+                const cycleWarning = document.getElementById('cycleWarning');
+                cycleWarning.style.display = result.hasCycles ? 'block' : 'none';
+
+                // Afficher l'état des portes
+                this.updateGatesStatus(result.allGates);
+                this.updateConnectionsStatus();
+            }
+
+            updateGatesStatus(allGates) {
+                const container = document.getElementById('gatesStatus');
+                let html = '<div class="small">';
+
+                for (const [gateId, value] of allGates) {
+                    const gate = this.calculator.gates.get(gateId);
+                    const valueClass = value === 1 ? 'gate-value-1' : 'gate-value-0';
+                    html += `<div class="mb-1">
+                        <strong>${gate.type}</strong> (${gateId}): 
+                        <span class="${valueClass}">${value}</span>
+                    </div>`;
+                }
+
+                html += '</div>';
+                container.innerHTML = html;
+            }
+
+            updateConnectionsStatus() {
+                const container = document.getElementById('connectionsStatus');
+                const connections = this.calculator.connections;
+
+                if (connections.length === 0) {
+                    container.innerHTML = '<small class="text-muted">Aucune connexion</small>';
+                    return;
+                }
+
+                let html = '<div class="small">';
+                connections.forEach((conn, index) => {
+                    const fromGate = this.calculator.gates.get(conn.from);
+                    const toGate = this.calculator.gates.get(conn.to);
+                    html += `<div class="mb-1">
+                        ${fromGate.type} → ${toGate.type}
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            }
+        }
+
+        // Initialiser la démo
+        const demo = new Demo();
+    </script>
+</body>
+
+</html>
