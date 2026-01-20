@@ -1,21 +1,29 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Logic Game - Phase 1</title>
+  <title>Hogwarts Logic Academy</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <header class="topbar">
-    <h1>⚡ Logic Game</h1>
+    <h1>🪄 Hogwarts Logic Academy</h1>
     <nav class="topnav">
-      <a href="#levels" id="navLevels">Niveaux</a>
+      <a href="#levels" id="navLevels">Levels</a>
     </nav>
   </header>
 
   <main id="app" class="app"></main>
 
+  <!-- Load scripts in correct order -->
+  <script src="circuitCalculator.js"></script>
+  <script src="gateSystem.js"></script>
+  <script src="wireRenderer.js"></script>
+  <script src="wireSystem.js"></script>
   <script src="app.js"></script>
 </body>
+
 </html>
