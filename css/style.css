@@ -373,6 +373,184 @@ body {
   }
 }
 
+/* ==================== LEADERBOARD STYLES ==================== */
+
+.leaderboard-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.leaderboard-modal.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaderboard-container {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}
+
+.leaderboard-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+
+.leaderboard-header h1 {
+  font-size: 18px;
+  margin: 0;
+  color: var(--accent);
+}
+
+.leaderboard-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.leaderboard-close:hover {
+  border-color: rgba(255, 255, 255, .25);
+  background: rgba(255, 255, 255, .06);
+}
+
+.leaderboard-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, .02);
+}
+
+.leaderboard-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.leaderboard-tab-btn:hover {
+  color: var(--text);
+}
+
+.leaderboard-tab-btn.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+.leaderboard-content {
+  padding: 16px;
+}
+
+.leaderboard-tab {
+  display: none;
+}
+
+.leaderboard-tab.active {
+  display: block;
+}
+
+.leaderboard-select {
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.leaderboard-select:hover {
+  border-color: rgba(255, 255, 255, .25);
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.leaderboard-table thead {
+  border-bottom: 1px solid var(--border);
+}
+
+.leaderboard-table th {
+  color: var(--accent);
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .5px;
+}
+
+.leaderboard-table td {
+  color: var(--text);
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, .04);
+}
+
+.leaderboard-table tbody tr:hover {
+  background: rgba(139, 92, 246, .1);
+}
+
+.leaderboard-rank {
+  color: var(--accent);
+  font-weight: 700;
+  min-width: 30px;
+}
+
+.leaderboard-empty {
+  text-align: center;
+  padding: 30px;
+  color: var(--muted);
+}
+
+@media (max-width: 768px) {
+  .leaderboard-container {
+    max-width: 95%;
+    border-radius: 12px;
+  }
+
+  .leaderboard-table {
+    font-size: 12px;
+  }
+
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 8px;
+  }
+}
+
 /* Victory Popup */
 .victory-popup {
   max-width: 600px;
