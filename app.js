@@ -230,14 +230,6 @@ function markVictory(levelId) {
     return p;
 }
 
-function isUnlocked(levelId, progress) {
-    return levelId <= progress.unlockedLevel;
-}
-
-function isCompleted(levelId, progress) {
-    return progress.completedLevels.includes(levelId);
-}
-
 // =============================
 // ROUTER HASH
 // =============================
@@ -268,6 +260,7 @@ function render() {
     if (route.name === "play" && route.levelId) return renderPlay(route.levelId, progress);
     if (route.name === "win" && route.levelId) return renderWin(route.levelId, progress);
     if (route.name === "lose" && route.levelId) return renderLose(route.levelId, progress);
+    if (route.name === "leaderboard") return renderLeaderboard();
 
     location.hash = "#levels";
 }
@@ -280,6 +273,7 @@ function renderLevelSelect(progress) {
 
       <div class="toolbar">
         <button class="btn danger" id="btnResetProgress">Reset Progress</button>
+        <button class="btn primary" id="btnLeaderboard">🏆</button>
       </div>
 
       <div style="margin-top:14px" class="level-grid" id="levelGrid"></div>
@@ -312,6 +306,12 @@ function renderLevelSelect(progress) {
         if (confirm("Reset all progress?")) {
             resetProgress();
             render();
+        }
+    });
+
+    document.getElementById("btnLeaderboard").addEventListener("click", () => {
+        if (window.leaderboardUI) {
+            window.leaderboardUI.open();
         }
     });
 
@@ -650,5 +650,27 @@ function renderLose(levelId, progress) {
 
     document.getElementById("btnRetry").addEventListener("click", () => {
         location.hash = `#play-${levelId}`;
+    });
+}
+
+function renderLeaderboard() {
+    app.innerHTML = `
+    <section class="panel">
+      <div style="text-align: center; padding: 40px;">
+        <p style="font-size: 20px; margin-bottom: 20px;">Ouvre le classement avec le bouton 🏆 en haut à droite</p>
+        <button class="btn primary" id="btnOpenLeaderboard">Ouvrir Classement</button>
+        <button class="btn" id="btnBackToLevels">← Retour aux Niveaux</button>
+      </div>
+    </section>
+  `;
+
+    document.getElementById("btnOpenLeaderboard").addEventListener("click", () => {
+        if (window.leaderboardUI) {
+            window.leaderboardUI.open();
+        }
+    });
+
+    document.getElementById("btnBackToLevels").addEventListener("click", () => {
+        location.hash = "#levels";
     });
 }

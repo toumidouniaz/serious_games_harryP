@@ -18,12 +18,29 @@
 
   <main id="app" class="app"></main>
 
-  <!-- Load scripts in correct order -->
-  <script src="circuitCalculator.js"></script>
-  <script src="gateSystem.js"></script>
+   <!-- 1. Wire System (Personne 3) - VALIDATION AVANT RENDU -->
+  <script src="wireValidator.js"></script>
   <script src="wireRenderer.js"></script>
   <script src="wireSystem.js"></script>
+
+  <!-- 2. Gates System (Personne 2) -->
+  <script src="gateSystem.js"></script>
+
+  <!-- 3. Circuit Calculator (Personne 4) -->
+  <script src="circuitCalculator.js"></script>
+
+  <!-- 4. Leaderboard (Personne 3, Phase 2) -->
+  <script src="leaderboardSystem.js"></script>
+  <script src="leaderboardUI.js"></script>
+
+  <!-- 5. Level Progression (Personne 1) -->
+  <script src="level-progression.js"></script>
+
+  <!-- 6. Main Game Controller (Personne 1) -->
   <script src="app.js"></script>
+
+   <!-- 7. Initialization (DERNIER) -->
+  <script src="main.js"></script>
 </body>
 
 </html>
