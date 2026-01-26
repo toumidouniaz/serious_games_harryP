@@ -230,14 +230,6 @@ function markVictory(levelId) {
     return p;
 }
 
-function isUnlocked(levelId, progress) {
-    return levelId <= progress.unlockedLevel;
-}
-
-function isCompleted(levelId, progress) {
-    return progress.completedLevels.includes(levelId);
-}
-
 // =============================
 // ROUTER HASH
 // =============================
@@ -268,6 +260,7 @@ function render() {
     if (route.name === "play" && route.levelId) return renderPlay(route.levelId, progress);
     if (route.name === "win" && route.levelId) return renderWin(route.levelId, progress);
     if (route.name === "lose" && route.levelId) return renderLose(route.levelId, progress);
+    if (route.name === "leaderboard") return renderLeaderboard();
 
     location.hash = "#levels";
 }
@@ -280,6 +273,8 @@ function renderLevelSelect(progress) {
 
       <div class="toolbar">
         <button class="btn danger" id="btnResetProgress">Reset Progress</button>
+        <button class="btn" id="btnMyCircuits">📚 My Circuits</button>
+        <button class="btn primary" id="btnLeaderboard">🏆</button>
       </div>
 
       <div style="margin-top:14px" class="level-grid" id="levelGrid"></div>
@@ -314,6 +309,15 @@ function renderLevelSelect(progress) {
             render();
         }
     });
+    document.getElementById("btnMyCircuits").addEventListener("click", () => {
+        window.circuitStorageUI.showCircuitLibrary();
+    });
+
+    document.getElementById("btnLeaderboard").addEventListener("click", () => {
+        if (window.leaderboardUI) {
+            window.leaderboardUI.open();
+        }
+    });
 
     grid.addEventListener("click", (e) => {
         const btn = e.target.closest("button[data-play]");
@@ -337,49 +341,51 @@ function renderPlay(levelId, progress) {
 
     app.innerHTML = `
     <section class="panel">
-      <!-- Top Section: Instructions and Controls -->
-      <div style="margin-bottom: 16px;">
+        <!-- Top Section: Instructions and Controls -->
+        <div style="margin-bottom: 16px;">
         <h2 class="h2">${lvl.title}</h2>
         <p class="muted">${lvl.description}</p>
         <div class="overlay">
-          <div><b>💡 Hint:</b> ${lvl.hint}</div>
+            <div><b>💡 Hint:</b> ${lvl.hint}</div>
         </div>
 
         <div class="toolbar">
-          <button class="btn" id="btnBack">← Back</button>
-          <button class="btn" id="btnResetLevel">🔄 Reset</button>
-          <button class="btn primary" id="btnCheck">✨ Cast Spell</button>
+            <button class="btn" id="btnBack">← Back</button>
+            <button class="btn" id="btnResetLevel">🔄 Reset</button>
+            <button class="btn" id="btnSaveCircuit">💾 Save Circuit</button>    <!-- NEW -->
+            <button class="btn" id="btnLoadCircuit">📂 My Circuits</button>    <!-- NEW -->
+            <button class="btn primary" id="btnCheck">✨ Cast Spell</button>
         </div>
 
         <div class="row" style="margin-top: 12px;">
-          <!-- Available Gates -->
-          <div class="col">
+            <!-- Available Gates -->
+            <div class="col">
             <div class="overlay">
-              <h3 style="margin:0 0 10px 0">🔮 Available Spells</h3>
-              <div id="gatePalette" class="toolbar"></div>
+                <h3 style="margin:0 0 10px 0">🔮 Available Spells</h3>
+                <div id="gatePalette" class="toolbar"></div>
             </div>
-          </div>
+        </div>
 
-          <!-- Input Controls -->
-          <div class="col">
-            <div class="overlay">
-              <h3 style="margin:0 0 10px 0">⚡ Magical Inputs</h3>
-              <div id="inputControls"></div>
+        <!-- Input Controls -->
+            <div class="col">
+                <div class="overlay">
+                    <h3 style="margin:0 0 10px 0">⚡ Magical Inputs</h3>
+                    <div id="inputControls"></div>
+                </div>
             </div>
-          </div>
         </div>
 
         <div id="statusArea" style="margin-top:12px"></div>
-      </div>
+    </div>
 
-      <!-- Bottom Section: Full-width Canvas -->
-      <div class="canvas-container" id="canvasHost" style="position:relative; height: 600px;">
-        <!-- Wire canvas -->
-        <canvas id="wireCanvas" class="wire-canvas"></canvas>
-        <!-- Gates will be added here -->
-      </div>
+    <!-- Bottom Section: Full-width Canvas -->
+        <div class="canvas-container" id="canvasHost" style="position:relative; height: 600px;">
+            <!-- Wire canvas -->
+                <canvas id="wireCanvas" class="wire-canvas"></canvas>
+            <!-- Gates will be added here -->
+        </div>
     </section>
-  `;
+`;
 
     // Initialize the game engine
     initializeGameEngine(lvl);
@@ -465,6 +471,14 @@ function initializeGameEngine(level) {
         checkSolution(level);
     });
 
+    document.getElementById("btnSaveCircuit").addEventListener("click", () => {
+        window.circuitStorageUI.showSaveDialog();
+    });
+
+    document.getElementById("btnLoadCircuit").addEventListener("click", () => {
+        window.circuitStorageUI.showCircuitLibrary();
+    });
+
     // Listen for wire changes
     wireCanvas.addEventListener('wireCreated', updateCircuitDisplay);
     wireCanvas.addEventListener('wireRemoved', updateCircuitDisplay);
@@ -537,7 +551,7 @@ function checkSolution(level) {
     }
 
     // Check 2: At least one gate is connected to the output
-    const outputId = 'output'; // Assuming all levels have an output gate with id 'output'
+    const outputId = 'output';
     const connectionsToOutput = window.circuitCalculator.connections.filter(
         conn => conn.to === outputId
     );
@@ -579,8 +593,8 @@ function checkSolution(level) {
         return false;
     }
 
-    // All checks passed!
-    location.hash = `#win-${level.id}`;
+    // All checks passed! Show victory popup
+    showVictoryPopup(level.id);
     return true;
 }
 
@@ -589,6 +603,92 @@ function setStatus(html, isError = true) {
     if (statusArea) {
         const className = isError ? "error" : "success";
         statusArea.innerHTML = html ? `<div class="overlay ${className}">${html}</div>` : "";
+    }
+}
+
+function showVictoryPopup(levelId) {
+    // Mark victory and get updated progress
+    const newProgress = markVictory(levelId);
+    const nextId = Math.min(levelId + 1, LEVELS.length);
+    const canGoNext = isUnlocked(nextId, newProgress) && nextId !== levelId;
+
+    // Create popup overlay
+    const popup = document.createElement('div');
+    popup.id = 'victoryPopup';
+    popup.className = 'modal-overlay';
+    popup.innerHTML = `
+        <div class="modal-content victory-popup">
+            <div style="text-align: center;">
+                <div style="font-size: 4em; margin-bottom: 16px;">✨</div>
+                <h2 class="h2">Spell Successfully Cast!</h2>
+                <p class="muted">Level ${levelId} completed. Your magical prowess grows!</p>
+            </div>
+
+            <div class="overlay success" style="margin: 20px 0;">
+                <p>🎉 <strong>Congratulations!</strong> Your circuit works perfectly!</p>
+                <p style="margin-top: 8px;">Now that you know it's correct, you might want to save it for later reference.</p>
+            </div>
+
+            <div class="toolbar">
+                <button class="btn" id="btnCloseVictory">Continue Practicing</button>
+                <button class="btn" id="btnSaveSuccess">💾 Save Circuit</button>
+                ${canGoNext ? `<button class="btn primary" id="btnNextFromPopup">Next Challenge →</button>` : ''}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Event listeners
+    document.getElementById('btnCloseVictory').onclick = () => {
+        popup.remove();
+        // Show "Next Level" button in toolbar if available
+        if (canGoNext) {
+            showNextLevelButton(nextId);
+        }
+    };
+
+    document.getElementById('btnSaveSuccess').onclick = () => {
+        popup.remove();
+        if (window.circuitStorageUI) {
+            window.circuitStorageUI.showSaveDialog();
+        }
+        // Show "Next Level" button after saving
+        if (canGoNext) {
+            showNextLevelButton(nextId);
+        }
+    };
+
+    if (canGoNext) {
+        document.getElementById('btnNextFromPopup').onclick = () => {
+            popup.remove();
+            location.hash = `#play-${nextId}`;
+        };
+    }
+}
+
+function showNextLevelButton(nextLevelId) {
+    // Check if button already exists
+    if (document.getElementById('btnNextLevel')) return;
+
+    // Add "Next Level" button to the main toolbar
+    const toolbar = document.querySelector('.toolbar');
+    if (!toolbar) return;
+
+    const nextBtn = document.createElement('button');
+    nextBtn.id = 'btnNextLevel';
+    nextBtn.className = 'btn primary';
+    nextBtn.innerHTML = '🎯 Next Challenge →';
+    nextBtn.onclick = () => {
+        location.hash = `#play-${nextLevelId}`;
+    };
+
+    // Insert before the "Cast Spell" button
+    const checkBtn = document.getElementById('btnCheck');
+    if (checkBtn) {
+        toolbar.insertBefore(nextBtn, checkBtn);
+    } else {
+        toolbar.appendChild(nextBtn);
     }
 }
 
@@ -650,5 +750,27 @@ function renderLose(levelId, progress) {
 
     document.getElementById("btnRetry").addEventListener("click", () => {
         location.hash = `#play-${levelId}`;
+    });
+}
+
+function renderLeaderboard() {
+    app.innerHTML = `
+    <section class="panel">
+      <div style="text-align: center; padding: 40px;">
+        <p style="font-size: 20px; margin-bottom: 20px;">Ouvre le classement avec le bouton 🏆 en haut à droite</p>
+        <button class="btn primary" id="btnOpenLeaderboard">Ouvrir Classement</button>
+        <button class="btn" id="btnBackToLevels">← Retour aux Niveaux</button>
+      </div>
+    </section>
+  `;
+
+    document.getElementById("btnOpenLeaderboard").addEventListener("click", () => {
+        if (window.leaderboardUI) {
+            window.leaderboardUI.open();
+        }
+    });
+
+    document.getElementById("btnBackToLevels").addEventListener("click", () => {
+        location.hash = "#levels";
     });
 }
