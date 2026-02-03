@@ -1,18 +1,73 @@
-// main.js - Initialisation du jeu
+// main.js - Game Initialization with Auth
 
-// Initialiser le leaderboard IMMÉDIATEMENT (avant DOMContentLoaded)
+// ============================================
+// INITIALIZE USER SESSION
+// ============================================
+async function initializeUserSession() {
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+
+    if (session?.user) {
+      window.currentUserId = session.user.id;
+      console.log('✅ User session loaded:', session.user.email);
+
+      // Migrate local progress to database if needed
+      if (window.migrateLocalProgressIfNeeded) {
+        await window.migrateLocalProgressIfNeeded(session.user.id);
+      }
+    } else {
+      window.currentUserId = null;
+      console.log('ℹ️ No user session - using local storage');
+    }
+  } catch (error) {
+    console.error('❌ Error loading session:', error);
+    window.currentUserId = null;
+  }
+}
+
+// ============================================
+// LEADERBOARD INITIALIZATION
+// ============================================
 try {
   window.leaderboard = new LeaderboardSystem();
   window.leaderboardUI = new LeaderboardUI(window.leaderboard);
-  console.log('✅ Leaderboard initialisé');
+  console.log('✅ Leaderboard initialized');
 } catch (error) {
-  console.error('❌ Erreur leaderboard:', error);
+  console.error('❌ Leaderboard error:', error);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('🎮 Initialisation du jeu...');
+// ============================================
+// AUTH STATE LISTENER
+// ============================================
+if (window.sb) {
+  window.sb.auth.onAuthStateChange(async (event, session) => {
+    console.log('🔄 Auth state changed:', event);
 
-  // Bouton classement (navbar)
+    if (event === 'SIGNED_IN' && session?.user) {
+      window.currentUserId = session.user.id;
+      console.log('✅ User signed in:', session.user.email);
+
+      // Migrate local data if needed
+      if (window.migrateLocalProgressIfNeeded) {
+        await window.migrateLocalProgressIfNeeded(session.user.id);
+      }
+    } else if (event === 'SIGNED_OUT') {
+      window.currentUserId = null;
+      console.log('ℹ️ User signed out');
+    }
+  });
+}
+
+// ============================================
+// DOM READY INITIALIZATION
+// ============================================
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🎮 Initializing game...');
+
+  // Initialize user session first
+  await initializeUserSession();
+
+  // Leaderboard button (navbar)
   const leaderboardBtn = document.getElementById('leaderboardBtn');
   if (leaderboardBtn) {
     leaderboardBtn.addEventListener('click', (e) => {
@@ -20,12 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.leaderboardUI) {
         window.leaderboardUI.open();
       } else {
-        console.error('leaderboardUI pas initialisé');
+        console.error('leaderboardUI not initialized');
       }
     });
   }
 
-  // Bouton dans la page du classement
+  // Leaderboard button (page)
   const btnOpenLeaderboard = document.getElementById('btnOpenLeaderboard');
   if (btnOpenLeaderboard) {
     btnOpenLeaderboard.addEventListener('click', () => {
@@ -35,5 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  console.log('✅ Jeu initialisé !');
+  console.log('✅ Game initialized!');
+  console.log('Current user ID:', window.currentUserId || 'Not logged in');
 });

@@ -1,12 +1,226 @@
 // ============================================
-// app.js - Main game controller
+// app.js - Main game controller with Achievements
 // Person 1's responsibility - Game flow & levels
 // ============================================
 
-const STORAGE_KEY = "hp_logic_progress";
+const APP_STORAGE_KEY = "hp_logic_progress";
 
-// Level definitions - Person 5 will expand these
-const LEVELS = [
+// =============================
+// ACHIEVEMENTS SYSTEM
+// =============================
+const ACHIEVEMENTS = [
+    { id: 1, title: "🎓 Lumos Learner", description: "Complete Level 1 - The Lumos Charm", condition: lvl => lvl === 1 },
+    { id: 2, title: "🗝️ Lock Picker", description: "Complete Level 2 - The Alohomora Spell", condition: lvl => lvl === 2 },
+    { id: 3, title: "🔄 Reversal Master", description: "Complete Level 3 - The Reversing Charm", condition: lvl => lvl === 3 },
+    { id: 4, title: "🦌 Patronus Caster", description: "Complete Level 4 - The Patronus Challenge", condition: lvl => lvl === 4 },
+    { id: 5, title: "✨ XOR Wizard", description: "Complete Level 5 - The Switching Spell", condition: lvl => lvl === 5 },
+    { id: 6, title: "👻 Invisibility Expert", description: "Complete Level 6 - The Invisibility Cloak", condition: lvl => lvl === 6 },
+    { id: 7, title: "🎩 Sorting Hat Scholar", description: "Complete Level 7 - The Sorting Hat", condition: lvl => lvl === 7 },
+    { id: 8, title: "🗺️ Marauder's Mind", description: "Complete Level 8 - The Marauder's Map", condition: lvl => lvl === 8 },
+    { id: 9, title: "⏰ Time Turner", description: "Complete Level 9 - The Time-Turner", condition: lvl => lvl === 9 },
+    { id: 10, title: "🏆 Chamber Champion", description: "Complete Level 10 - The Chamber of Secrets", condition: lvl => lvl === 10 },
+    { id: 11, title: "🔥 Triwizard Victor", description: "Complete Level 11 - The Triwizard Tournament", condition: lvl => lvl === 11 },
+    { id: 12, title: "🪞 Mirror Master", description: "Complete Level 12 - The Mirror of Erised", condition: lvl => lvl === 12 },
+    { id: 13, title: "⚡ Speed Demon", description: "Complete any level in under 2 minutes", condition: (lvl, time) => time && time < 120 },
+    { id: 14, title: "🎯 Perfectionist", description: "Complete 5 levels in a row without reset", condition: lvl => false }, // Special tracking
+    { id: 15, title: "🌟 Logic Legend", description: "Complete all 12 levels", condition: lvl => false }, // Special check
+];
+
+const ACHIEVEMENTS_STORAGE_KEY = "hp_logic_achievements";
+
+// Achievement Manager
+const achievementManager = {
+    data: JSON.parse(localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY)) || {},
+    levelStartTime: null,
+    consecutiveCompletes: 0,
+
+    startLevel() {
+        this.levelStartTime = Date.now();
+    },
+
+    checkEvent(event) {
+        if (event.type === "LEVEL_COMPLETE" && Number.isFinite(event.levelId)) {
+            const completionTime = this.levelStartTime ? (Date.now() - this.levelStartTime) / 1000 : null;
+
+            // Check standard level achievements
+            ACHIEVEMENTS.forEach(ach => {
+                if (ach.condition(event.levelId, completionTime) && !this.data[ach.id]) {
+                    this.unlock(ach);
+                }
+            });
+
+            // Check speed achievement
+            if (completionTime && completionTime < 120) {
+                const speedAch = ACHIEVEMENTS.find(a => a.id === 13);
+                if (speedAch && !this.data[13]) {
+                    this.unlock(speedAch);
+                }
+            }
+
+            // Track consecutive completions
+            this.consecutiveCompletes++;
+            if (this.consecutiveCompletes >= 5) {
+                const perfectAch = ACHIEVEMENTS.find(a => a.id === 14);
+                if (perfectAch && !this.data[14]) {
+                    this.unlock(perfectAch);
+                }
+            }
+
+            // Check if all levels completed
+            const progress = loadProgress();
+            if (progress.completedLevels.length >= 12) {
+                const legendAch = ACHIEVEMENTS.find(a => a.id === 15);
+                if (legendAch && !this.data[15]) {
+                    this.unlock(legendAch);
+                }
+            }
+        }
+    },
+
+    unlock(achievement) {
+        this.data[achievement.id] = {
+            unlocked: true,
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(this.data));
+        this.showPopup(achievement);
+    },
+
+    showPopup(ach) {
+        const popup = document.createElement('div');
+        popup.className = "achievement-popup";
+        popup.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.5s, top 0.5s;
+            animation: achievementSlideIn 0.5s ease forwards;
+        `;
+
+        popup.innerHTML = `
+            <div style="background: linear-gradient(135deg, var(--accent), #6366f1); padding: 20px 24px; border-radius: 12px; box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4); text-align: center; min-width: 300px;">
+                <div style="font-size: 3em; margin-bottom: 8px;">🎉</div>
+                <div style="color: white; font-size: 18px; font-weight: bold; margin-bottom: 4px;">Achievement Unlocked!</div>
+                <div style="color: rgba(255,255,255,0.95); font-weight: 600; margin-bottom: 4px;">${ach.title}</div>
+                <div style="color: rgba(255,255,255,0.8); font-size: 14px;">${ach.description}</div>
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+
+        setTimeout(() => {
+            popup.style.opacity = 1;
+            popup.style.top = "80px";
+        }, 50);
+
+        setTimeout(() => {
+            popup.style.opacity = 0;
+            popup.style.top = "40px";
+            setTimeout(() => popup.remove(), 500);
+        }, 4000);
+    },
+
+    renderPage() {
+        const stats = this.getStats();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+        <div class="modal-content" style="max-width: 600px; position: relative;">
+            <button id="closeAchievements" style="position: absolute; top: 16px; right: 16px; background: transparent; border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 1;">✕</button>
+            
+            <h2 class="h2">🏆 Achievements</h2>
+            <p class="muted">Unlock achievements by completing challenges and mastering spells!</p>
+            
+            <div class="overlay" style="margin: 16px 0; text-align: center;">
+                <div style="font-size: 2em; margin-bottom: 8px;">${stats.percent}%</div>
+                <div><strong>${stats.unlocked}</strong> of <strong>${stats.total}</strong> achievements unlocked</div>
+            </div>
+
+            <div style="max-height: 400px; overflow-y: auto; margin: 16px 0;">
+                ${ACHIEVEMENTS.map(ach => {
+            const unlocked = this.data[ach.id];
+            return `
+                        <div class="circuit-card" style="opacity: ${unlocked ? '1' : '0.6'};">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="font-size: 2em;">${unlocked ? '✅' : '🔒'}</div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: ${unlocked ? 'var(--ok)' : 'var(--muted)'};">
+                                        ${ach.title}
+                                    </div>
+                                    <div class="muted" style="font-size: 0.9em;">${ach.description}</div>
+                                    ${unlocked ? `<div class="muted" style="font-size: 0.8em; margin-top: 4px;">Unlocked: ${new Date(unlocked.timestamp).toLocaleDateString()}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+        }).join('')}
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(overlay);
+
+        // Close button event
+        document.getElementById("closeAchievements").onclick = () => overlay.remove();
+
+        // Close on overlay click (outside modal)
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        };
+
+        // Add hover effect for close button
+        const closeBtn = document.getElementById("closeAchievements");
+        closeBtn.onmouseenter = () => {
+            closeBtn.style.borderColor = 'rgba(255, 255, 255, .25)';
+            closeBtn.style.background = 'rgba(255, 255, 255, .06)';
+        };
+        closeBtn.onmouseleave = () => {
+            closeBtn.style.borderColor = 'var(--border)';
+            closeBtn.style.background = 'transparent';
+        };
+    },
+
+    getStats() {
+        const total = ACHIEVEMENTS.length;
+        const unlocked = Object.keys(this.data).filter(key => this.data[key].unlocked).length;
+        return {
+            total,
+            unlocked,
+            percent: Math.round((unlocked / total) * 100)
+        };
+    },
+
+    resetOnLevelReset() {
+        this.consecutiveCompletes = 0;
+    }
+};
+
+// Add CSS for achievement animation
+const style = document.createElement('style');
+style.textContent = `
+@keyframes achievementSlideIn {
+    from {
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+`;
+document.head.appendChild(style);
+
+// =============================
+// EXISTING LEVELS DEFINITION
+// =============================
+const APP_LEVELS = [
     {
         id: 1,
         title: "The Lumos Charm",
@@ -16,7 +230,7 @@ const LEVELS = [
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
             { id: 'input2', type: 'INPUT', x: 80, y: 250, value: 1 },
-            { id: 'output', type: 'OUTPUT', x: 700, y: 175 } // ← Fixed position
+            { id: 'output', type: 'OUTPUT', x: 700, y: 175 }
         ],
         targetOutputs: { output: 1 }
     },
@@ -29,7 +243,7 @@ const LEVELS = [
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 0 },
             { id: 'input2', type: 'INPUT', x: 80, y: 250, value: 1 },
-            { id: 'output', type: 'OUTPUT', x: 700, y: 175 } // ← Fixed
+            { id: 'output', type: 'OUTPUT', x: 700, y: 175 }
         ],
         targetOutputs: { output: 1 }
     },
@@ -41,7 +255,7 @@ const LEVELS = [
         availableGates: ['NOT'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 175, value: 0 },
-            { id: 'output', type: 'OUTPUT', x: 700, y: 175 } // ← Fixed
+            { id: 'output', type: 'OUTPUT', x: 700, y: 175 }
         ],
         targetOutputs: { output: 1 }
     },
@@ -54,7 +268,7 @@ const LEVELS = [
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
             { id: 'input2', type: 'INPUT', x: 80, y: 250, value: 1 },
-            { id: 'output', type: 'OUTPUT', x: 700, y: 175 } // ← Fixed
+            { id: 'output', type: 'OUTPUT', x: 700, y: 175 }
         ],
         targetOutputs: { output: 0 }
     },
@@ -67,11 +281,10 @@ const LEVELS = [
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
             { id: 'input2', type: 'INPUT', x: 80, y: 250, value: 0 },
-            { id: 'output', type: 'OUTPUT', x: 700, y: 175 } // ← Fixed
+            { id: 'output', type: 'OUTPUT', x: 700, y: 175 }
         ],
         targetOutputs: { output: 1 }
     },
-    // Add these new levels after level 5
     {
         id: 6,
         title: "The Invisibility Cloak",
@@ -138,7 +351,7 @@ const LEVELS = [
             { id: 'Sum', type: 'OUTPUT', x: 700, y: 150 },
             { id: 'Cout', type: 'OUTPUT', x: 700, y: 250 }
         ],
-        targetOutputs: { Sum: 0, Cout: 1 } // 1 + 1 + 0 = 10 (binary)
+        targetOutputs: { Sum: 0, Cout: 1 }
     },
     {
         id: 11,
@@ -151,7 +364,7 @@ const LEVELS = [
             { id: 'bit2', type: 'INPUT', x: 80, y: 200, value: 1 },
             { id: 'output', type: 'OUTPUT', x: 700, y: 150 }
         ],
-        targetOutputs: { output: 1 } // Binary 11 = 3 > 2
+        targetOutputs: { output: 1 }
     },
     {
         id: 12,
@@ -164,7 +377,7 @@ const LEVELS = [
             { id: 'input2', type: 'INPUT', x: 80, y: 250, value: 1 },
             { id: 'output', type: 'OUTPUT', x: 700, y: 175 }
         ],
-        targetOutputs: { output: 0 } // NAND gate: NOT(1 AND 1) = 0
+        targetOutputs: { output: 0 }
     }
 ];
 
@@ -223,10 +436,14 @@ function markVictory(levelId) {
     }
 
     if (levelId === p.unlockedLevel) {
-        p.unlockedLevel = Math.min(levelId + 1, LEVELS.length);
+        p.unlockedLevel = Math.min(levelId + 1, APP_LEVELS.length);
     }
 
     saveProgress(p);
+
+    // Trigger achievement check
+    achievementManager.checkEvent({ type: "LEVEL_COMPLETE", levelId: levelId });
+
     return p;
 }
 
@@ -247,8 +464,6 @@ window.addEventListener("load", () => {
     render();
 });
 
-const app = document.getElementById("app");
-
 // =============================
 // RENDERS
 // =============================
@@ -260,12 +475,15 @@ function render() {
     if (route.name === "play" && route.levelId) return renderPlay(route.levelId, progress);
     if (route.name === "win" && route.levelId) return renderWin(route.levelId, progress);
     if (route.name === "lose" && route.levelId) return renderLose(route.levelId, progress);
+    if (route.name === "achievements") return achievementManager.renderPage();
     if (route.name === "leaderboard") return renderLeaderboard();
 
     location.hash = "#levels";
 }
 
 function renderLevelSelect(progress) {
+    const achStats = achievementManager.getStats();
+
     app.innerHTML = `
     <section class="panel">
       <h2 class="h2">🪄 Hogwarts Logic Academy</h2>
@@ -274,7 +492,8 @@ function renderLevelSelect(progress) {
       <div class="toolbar">
         <button class="btn danger" id="btnResetProgress">Reset Progress</button>
         <button class="btn" id="btnMyCircuits">📚 My Circuits</button>
-        <button class="btn primary" id="btnLeaderboard">🏆</button>
+        <button class="btn" id="btnAchievements">🏆 Achievements (${achStats.unlocked}/${achStats.total})</button>
+        <button class="btn primary" id="btnLeaderboard">📊 Leaderboard</button>
       </div>
 
       <div style="margin-top:14px" class="level-grid" id="levelGrid"></div>
@@ -283,7 +502,7 @@ function renderLevelSelect(progress) {
 
     const grid = document.getElementById("levelGrid");
 
-    LEVELS.forEach((lvl) => {
+    APP_LEVELS.forEach((lvl) => {
         const unlocked = isUnlocked(lvl.id, progress);
         const completed = isCompleted(lvl.id, progress);
 
@@ -304,13 +523,18 @@ function renderLevelSelect(progress) {
     });
 
     document.getElementById("btnResetProgress").addEventListener("click", () => {
-        if (confirm("Reset all progress?")) {
+        if (confirm("Reset all progress? This will not reset achievements.")) {
             resetProgress();
             render();
         }
     });
+
     document.getElementById("btnMyCircuits").addEventListener("click", () => {
         window.circuitStorageUI.showCircuitLibrary();
+    });
+
+    document.getElementById("btnAchievements").addEventListener("click", () => {
+        achievementManager.renderPage();
     });
 
     document.getElementById("btnLeaderboard").addEventListener("click", () => {
@@ -333,11 +557,14 @@ function renderPlay(levelId, progress) {
         return;
     }
 
-    const lvl = LEVELS.find((x) => x.id === levelId);
+    const lvl = APP_LEVELS.find((x) => x.id === levelId);
     if (!lvl) {
         location.hash = "#levels";
         return;
     }
+
+    // Start timing for achievements
+    achievementManager.startLevel();
 
     app.innerHTML = `
     <section class="panel">
@@ -352,8 +579,8 @@ function renderPlay(levelId, progress) {
         <div class="toolbar">
             <button class="btn" id="btnBack">← Back</button>
             <button class="btn" id="btnResetLevel">🔄 Reset</button>
-            <button class="btn" id="btnSaveCircuit">💾 Save Circuit</button>    <!-- NEW -->
-            <button class="btn" id="btnLoadCircuit">📂 My Circuits</button>    <!-- NEW -->
+            <button class="btn" id="btnSaveCircuit">💾 Save Circuit</button>
+            <button class="btn" id="btnLoadCircuit">📂 My Circuits</button>
             <button class="btn primary" id="btnCheck">✨ Cast Spell</button>
         </div>
 
@@ -426,14 +653,12 @@ function initializeGameEngine(level) {
     });
 
     // Setup gate palette
-    // Setup gate palette with better positioning
     const gatePalette = document.getElementById('gatePalette');
     level.availableGates.forEach((gateType, index) => {
         const btn = document.createElement('button');
         btn.className = 'btn';
         btn.textContent = `+ ${gateType}`;
         btn.onclick = () => {
-            // Calculate position with spacing
             const spacing = 100;
             const startX = 300;
             const startY = 200;
@@ -464,6 +689,7 @@ function initializeGameEngine(level) {
     });
 
     document.getElementById("btnResetLevel").addEventListener("click", () => {
+        achievementManager.resetOnLevelReset();
         location.reload();
     });
 
@@ -505,7 +731,6 @@ function toggleInput(inputId) {
 function updateCircuitDisplay() {
     const result = window.circuitCalculator.calculateAll();
 
-    // Update gate displays with their values
     window.gateSystem.placedGates.forEach(gate => {
         const value = result.allGates.get(gate.id);
         const valueDisplay = gate.element.querySelector('.gate-value');
@@ -541,7 +766,6 @@ function updateCircuitDisplay() {
 function checkSolution(level) {
     const result = window.circuitCalculator.calculateAll();
 
-    // Check 1: Output has correct value
     for (const [outputId, targetValue] of Object.entries(level.targetOutputs)) {
         const actualValue = result.outputs.get(outputId);
         if (actualValue !== targetValue) {
@@ -550,8 +774,7 @@ function checkSolution(level) {
         }
     }
 
-    // Check 2: At least one gate is connected to the output
-    const outputId = 'output';
+    const outputId = Object.keys(level.targetOutputs)[0] || 'output';
     const connectionsToOutput = window.circuitCalculator.connections.filter(
         conn => conn.to === outputId
     );
@@ -561,7 +784,6 @@ function checkSolution(level) {
         return false;
     }
 
-    // Check 3: At least one logic gate is placed (not just INPUT gates)
     const placedGates = window.gateSystem.placedGates || [];
     const logicGateCount = placedGates.filter(gate =>
         !['INPUT', 'OUTPUT'].includes(gate.type)
@@ -572,7 +794,6 @@ function checkSolution(level) {
         return false;
     }
 
-    // Check 4: All gates must be properly connected (no floating gates)
     const allGates = Array.from(window.circuitCalculator.gates.keys());
     const connectedGates = new Set();
 
@@ -593,7 +814,6 @@ function checkSolution(level) {
         return false;
     }
 
-    // All checks passed! Show victory popup
     showVictoryPopup(level.id);
     return true;
 }
@@ -607,12 +827,10 @@ function setStatus(html, isError = true) {
 }
 
 function showVictoryPopup(levelId) {
-    // Mark victory and get updated progress
     const newProgress = markVictory(levelId);
-    const nextId = Math.min(levelId + 1, LEVELS.length);
+    const nextId = Math.min(levelId + 1, APP_LEVELS.length);
     const canGoNext = isUnlocked(nextId, newProgress) && nextId !== levelId;
 
-    // Create popup overlay
     const popup = document.createElement('div');
     popup.id = 'victoryPopup';
     popup.className = 'modal-overlay';
@@ -639,10 +857,8 @@ function showVictoryPopup(levelId) {
 
     document.body.appendChild(popup);
 
-    // Event listeners
     document.getElementById('btnCloseVictory').onclick = () => {
         popup.remove();
-        // Show "Next Level" button in toolbar if available
         if (canGoNext) {
             showNextLevelButton(nextId);
         }
@@ -653,7 +869,6 @@ function showVictoryPopup(levelId) {
         if (window.circuitStorageUI) {
             window.circuitStorageUI.showSaveDialog();
         }
-        // Show "Next Level" button after saving
         if (canGoNext) {
             showNextLevelButton(nextId);
         }
@@ -668,10 +883,8 @@ function showVictoryPopup(levelId) {
 }
 
 function showNextLevelButton(nextLevelId) {
-    // Check if button already exists
     if (document.getElementById('btnNextLevel')) return;
 
-    // Add "Next Level" button to the main toolbar
     const toolbar = document.querySelector('.toolbar');
     if (!toolbar) return;
 
@@ -683,7 +896,6 @@ function showNextLevelButton(nextLevelId) {
         location.hash = `#play-${nextLevelId}`;
     };
 
-    // Insert before the "Cast Spell" button
     const checkBtn = document.getElementById('btnCheck');
     if (checkBtn) {
         toolbar.insertBefore(nextBtn, checkBtn);
@@ -694,7 +906,7 @@ function showNextLevelButton(nextLevelId) {
 
 function renderWin(levelId) {
     const newProgress = markVictory(levelId);
-    const nextId = Math.min(levelId + 1, LEVELS.length);
+    const nextId = Math.min(levelId + 1, APP_LEVELS.length);
     const canGoNext = isUnlocked(nextId, newProgress) && nextId !== levelId;
 
     app.innerHTML = `
@@ -757,9 +969,9 @@ function renderLeaderboard() {
     app.innerHTML = `
     <section class="panel">
       <div style="text-align: center; padding: 40px;">
-        <p style="font-size: 20px; margin-bottom: 20px;">Ouvre le classement avec le bouton 🏆 en haut à droite</p>
-        <button class="btn primary" id="btnOpenLeaderboard">Ouvrir Classement</button>
-        <button class="btn" id="btnBackToLevels">← Retour aux Niveaux</button>
+        <p style="font-size: 20px; margin-bottom: 20px;">Open the leaderboard with the 🏆 button at the top right</p>
+        <button class="btn primary" id="btnOpenLeaderboard">Open Leaderboard</button>
+        <button class="btn" id="btnBackToLevels">← Back to Levels</button>
       </div>
     </section>
   `;
