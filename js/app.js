@@ -3,7 +3,7 @@
 // Person 1's responsibility - Game flow & levels
 // ============================================
 
-const STORAGE_KEY = "hp_logic_progress";
+const APP_STORAGE_KEY = "hp_logic_progress";
 
 // =============================
 // ACHIEVEMENTS SYSTEM
@@ -220,7 +220,7 @@ document.head.appendChild(style);
 // =============================
 // EXISTING LEVELS DEFINITION
 // =============================
-const LEVELS = [
+const APP_LEVELS = [
     {
         id: 1,
         title: "The Lumos Charm",
@@ -436,7 +436,7 @@ function markVictory(levelId) {
     }
 
     if (levelId === p.unlockedLevel) {
-        p.unlockedLevel = Math.min(levelId + 1, LEVELS.length);
+        p.unlockedLevel = Math.min(levelId + 1, APP_LEVELS.length);
     }
 
     saveProgress(p);
@@ -502,7 +502,7 @@ function renderLevelSelect(progress) {
 
     const grid = document.getElementById("levelGrid");
 
-    LEVELS.forEach((lvl) => {
+    APP_LEVELS.forEach((lvl) => {
         const unlocked = isUnlocked(lvl.id, progress);
         const completed = isCompleted(lvl.id, progress);
 
@@ -557,7 +557,7 @@ function renderPlay(levelId, progress) {
         return;
     }
 
-    const lvl = LEVELS.find((x) => x.id === levelId);
+    const lvl = APP_LEVELS.find((x) => x.id === levelId);
     if (!lvl) {
         location.hash = "#levels";
         return;
@@ -828,7 +828,7 @@ function setStatus(html, isError = true) {
 
 function showVictoryPopup(levelId) {
     const newProgress = markVictory(levelId);
-    const nextId = Math.min(levelId + 1, LEVELS.length);
+    const nextId = Math.min(levelId + 1, APP_LEVELS.length);
     const canGoNext = isUnlocked(nextId, newProgress) && nextId !== levelId;
 
     const popup = document.createElement('div');
@@ -906,7 +906,7 @@ function showNextLevelButton(nextLevelId) {
 
 function renderWin(levelId) {
     const newProgress = markVictory(levelId);
-    const nextId = Math.min(levelId + 1, LEVELS.length);
+    const nextId = Math.min(levelId + 1, APP_LEVELS.length);
     const canGoNext = isUnlocked(nextId, newProgress) && nextId !== levelId;
 
     app.innerHTML = `

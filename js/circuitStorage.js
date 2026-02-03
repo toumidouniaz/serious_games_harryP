@@ -1,7 +1,11 @@
+// ============================================
+// circuitStorage.js - UPDATED WITH DATABASE SUPPORT
+// ============================================
+
 class CircuitStorage {
     constructor() {
         this.STORAGE_KEY = "hp_saved_circuits";
-        this.currentCircuitId = null; // Track if we're editing an existing circuit
+        this.currentCircuitId = null;
     }
 
     // =============================
@@ -16,7 +20,7 @@ class CircuitStorage {
             timestamp: new Date().toISOString(),
             gates: this.serializeGates(),
             wires: this.serializeWires(),
-            version: "1.0" // For future compatibility
+            version: "1.0"
         };
         return circuit;
     }
@@ -50,16 +54,39 @@ class CircuitStorage {
     }
 
     // =============================
-    // STORAGE (localStorage for now)
+    // STORAGE (DB if logged in, localStorage if not)
     // =============================
 
-    saveCircuit(name, description = "") {
+    async saveCircuit(name, description = "", levelId = null) {
         try {
             const circuit = this.serializeCircuit(name, description);
-            const saved = this.getAllCircuits();
+            const userId = window.currentUserId;
 
-            // Check if updating existing circuit
+            // If user is logged in and DatabaseService exists, save to DB
+            if (userId && window.DatabaseService) {
+                try {
+                    const result = await window.DatabaseService.saveCircuit(userId, {
+                        levelId: levelId,
+                        name: circuit.name,
+                        circuitJson: {
+                            gates: circuit.gates,
+                            wires: circuit.wires,
+                            version: circuit.version
+                        }
+                    });
+
+                    this.currentCircuitId = result.id;
+                    return { success: true, circuit: result, source: 'database' };
+                } catch (dbError) {
+                    console.warn("⚠️ DB save failed, falling back to localStorage:", dbError);
+                    // Fall through to localStorage
+                }
+            }
+
+            // Fallback to localStorage
+            const saved = this.getAllCircuitsLocal();
             const existingIndex = saved.findIndex(c => c.id === circuit.id);
+
             if (existingIndex >= 0) {
                 saved[existingIndex] = circuit;
             } else {
@@ -68,14 +95,16 @@ class CircuitStorage {
 
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saved));
             this.currentCircuitId = circuit.id;
-            return { success: true, circuit };
+            return { success: true, circuit, source: 'localStorage' };
+
         } catch (error) {
             console.error("Save failed:", error);
             return { success: false, error: error.message };
         }
     }
 
-    getAllCircuits() {
+    // Get all circuits from localStorage
+    getAllCircuitsLocal() {
         try {
             const data = localStorage.getItem(this.STORAGE_KEY);
             return data ? JSON.parse(data) : [];
@@ -84,16 +113,59 @@ class CircuitStorage {
         }
     }
 
-    getCircuit(circuitId) {
-        const circuits = this.getAllCircuits();
+    // Get all circuits (DB + localStorage)
+    async getAllCircuits() {
+        const userId = window.currentUserId;
+        let circuits = [];
+
+        // Try to get from database first
+        if (userId && window.DatabaseService) {
+            try {
+                const dbCircuits = await window.DatabaseService.getAllCircuits(userId);
+                circuits = dbCircuits.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    description: c.description || '',
+                    timestamp: c.created_at,
+                    gates: c.circuit_json.gates || [],
+                    wires: c.circuit_json.wires || [],
+                    version: c.circuit_json.version || '1.0',
+                    source: 'database'
+                }));
+            } catch (error) {
+                console.warn("⚠️ Failed to load from DB:", error);
+            }
+        }
+
+        // Also get localStorage circuits
+        const localCircuits = this.getAllCircuitsLocal().map(c => ({
+            ...c,
+            source: 'localStorage'
+        }));
+
+        // Combine both sources
+        return [...circuits, ...localCircuits];
+    }
+
+    async getCircuit(circuitId) {
+        const circuits = await this.getAllCircuits();
         return circuits.find(c => c.id === circuitId);
     }
 
-    deleteCircuit(circuitId) {
+    async deleteCircuit(circuitId) {
         try {
-            let circuits = this.getAllCircuits();
-            circuits = circuits.filter(c => c.id !== circuitId);
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(circuits));
+            const circuit = await this.getCircuit(circuitId);
+
+            if (circuit?.source === 'database' && window.DatabaseService) {
+                // Delete from database
+                await window.DatabaseService.deleteCircuit(circuitId);
+            } else {
+                // Delete from localStorage
+                let circuits = this.getAllCircuitsLocal();
+                circuits = circuits.filter(c => c.id !== circuitId);
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(circuits));
+            }
+
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
@@ -104,14 +176,13 @@ class CircuitStorage {
     // DESERIALIZATION & LOADING
     // =============================
 
-    loadCircuit(circuitId) {
+    async loadCircuit(circuitId) {
         try {
-            const circuit = this.getCircuit(circuitId);
+            const circuit = await this.getCircuit(circuitId);
             if (!circuit) {
                 return { success: false, error: "Circuit not found" };
             }
 
-            // Clear current circuit
             this.clearCurrentCircuit();
 
             // Restore gates first
@@ -130,14 +201,12 @@ class CircuitStorage {
 
             // Small delay to ensure gates are rendered
             setTimeout(() => {
-                // Restore wires
                 circuit.wires.forEach(wireData => {
                     window.circuitCalculator.addConnection(
                         wireData.from.gateId,
                         wireData.to.gateId
                     );
 
-                    // Recreate wire in wire system
                     const fromPort = this.findPort(wireData.from);
                     const toPort = this.findPort(wireData.to);
 
@@ -181,8 +250,8 @@ class CircuitStorage {
     // UTILITY METHODS
     // =============================
 
-    exportCircuitAsJSON(circuitId) {
-        const circuit = this.getCircuit(circuitId);
+    async exportCircuitAsJSON(circuitId) {
+        const circuit = await this.getCircuit(circuitId);
         if (!circuit) return null;
 
         const dataStr = JSON.stringify(circuit, null, 2);
@@ -197,30 +266,25 @@ class CircuitStorage {
         URL.revokeObjectURL(url);
     }
 
-    importCircuitFromJSON(jsonString) {
+    async importCircuitFromJSON(jsonString) {
         try {
             const circuit = JSON.parse(jsonString);
-            // Validate circuit structure
             if (!circuit.gates || !circuit.wires) {
                 throw new Error("Invalid circuit format");
             }
 
-            // Generate new ID to avoid conflicts
             circuit.id = Date.now();
             circuit.timestamp = new Date().toISOString();
 
-            const saved = this.getAllCircuits();
-            saved.push(circuit);
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saved));
-
-            return { success: true, circuit };
+            // Save using the regular save method (will choose DB or localStorage)
+            return await this.saveCircuit(circuit.name, circuit.description);
         } catch (error) {
             return { success: false, error: error.message };
         }
     }
 
-    getCircuitStats(circuitId) {
-        const circuit = this.getCircuit(circuitId);
+    async getCircuitStats(circuitId) {
+        const circuit = await this.getCircuit(circuitId);
         if (!circuit) return null;
 
         const gateTypes = {};
@@ -232,43 +296,14 @@ class CircuitStorage {
             totalGates: circuit.gates.length,
             totalWires: circuit.wires.length,
             gateTypes: gateTypes,
-            created: new Date(circuit.timestamp).toLocaleString()
+            created: new Date(circuit.timestamp).toLocaleString(),
+            source: circuit.source || 'unknown'
         };
-    }
-
-    // =============================
-    // DATABASE MIGRATION READY
-    // =============================
-
-    // When Person 1 has database ready, replace these methods:
-    async saveCircuitToDatabase(userId, name, description = "") {
-        // TODO: Replace with actual API call
-        // const response = await fetch('/api/circuits', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ 
-        //         userId, 
-        //         circuit: this.serializeCircuit(name, description) 
-        //     })
-        // });
-        // return response.json();
-
-        // For now, use localStorage
-        return this.saveCircuit(name, description);
-    }
-
-    async getAllCircuitsFromDatabase(userId) {
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/api/circuits?userId=${userId}`);
-        // return response.json();
-
-        // For now, use localStorage
-        return Promise.resolve(this.getAllCircuits());
     }
 }
 
 // ============================================
-// UI COMPONENTS
+// UI COMPONENTS (UPDATED)
 // ============================================
 
 class CircuitStorageUI {
@@ -276,7 +311,6 @@ class CircuitStorageUI {
         this.storage = storageInstance;
     }
 
-    // Show save dialog
     showSaveDialog() {
         const existingDialog = document.getElementById('saveCircuitDialog');
         if (existingDialog) existingDialog.remove();
@@ -321,20 +355,16 @@ class CircuitStorageUI {
 
         document.body.appendChild(dialog);
 
-        // Event listeners
         document.getElementById('btnCancelSave').onclick = () => dialog.remove();
         document.getElementById('btnConfirmSave').onclick = () => this.handleSave(dialog);
-
-        // Allow Enter to save
         document.getElementById('circuitName').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.handleSave(dialog);
         });
 
-        // Focus on name input
         document.getElementById('circuitName').focus();
     }
 
-    handleSave(dialog) {
+    async handleSave(dialog) {
         const name = document.getElementById('circuitName').value.trim();
         const description = document.getElementById('circuitDescription').value.trim();
         const statusDiv = document.getElementById('saveStatus');
@@ -344,30 +374,33 @@ class CircuitStorageUI {
             return;
         }
 
-        const result = this.storage.saveCircuit(name, description);
+        const result = await this.storage.saveCircuit(name, description);
 
         if (result.success) {
-            statusDiv.innerHTML = '<div class="overlay success">✅ Circuit saved successfully!</div>';
+            const source = result.source === 'database' ? 'cloud ☁️' : 'locally 💾';
+            statusDiv.innerHTML = `<div class="overlay success">✅ Circuit saved ${source}!</div>`;
             setTimeout(() => dialog.remove(), 1500);
         } else {
             statusDiv.innerHTML = `<div class="overlay error">❌ Save failed: ${result.error}</div>`;
         }
     }
 
-    // Show circuit library
-    showCircuitLibrary() {
+    async showCircuitLibrary() {
         const existingLibrary = document.getElementById('circuitLibrary');
         if (existingLibrary) existingLibrary.remove();
 
-        const circuits = this.storage.getAllCircuits();
+        const circuits = await this.storage.getAllCircuits();
 
         const library = document.createElement('div');
         library.id = 'circuitLibrary';
         library.className = 'modal-overlay';
+
+        const saveMode = window.currentUserId ? 'Cloud + Local' : 'Local Only';
+
         library.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <h3 class="h2">📚 My Circuit Library</h3>
-                <p class="muted">${circuits.length} saved circuit${circuits.length !== 1 ? 's' : ''}</p>
+                <p class="muted">${circuits.length} saved circuit${circuits.length !== 1 ? 's' : ''} (${saveMode})</p>
                 
                 <div id="circuitList" style="margin-top: 16px; max-height: 500px; overflow-y: auto;">
                     ${circuits.length === 0 ? this.renderEmptyState() : circuits.map(c => this.renderCircuitCard(c)).join('')}
@@ -382,11 +415,9 @@ class CircuitStorageUI {
 
         document.body.appendChild(library);
 
-        // Event listeners
         document.getElementById('btnCloseLibrary').onclick = () => library.remove();
         document.getElementById('btnImportCircuit').onclick = () => this.handleImport();
 
-        // Load and delete buttons for each circuit
         circuits.forEach(circuit => {
             const loadBtn = document.getElementById(`load_${circuit.id}`);
             const deleteBtn = document.getElementById(`delete_${circuit.id}`);
@@ -413,12 +444,13 @@ class CircuitStorageUI {
     renderCircuitCard(circuit) {
         const date = new Date(circuit.timestamp).toLocaleDateString();
         const time = new Date(circuit.timestamp).toLocaleTimeString();
+        const sourceIcon = circuit.source === 'database' ? '☁️' : '💾';
 
         return `
             <div class="circuit-card">
                 <div class="circuit-card-header">
                     <div>
-                        <h4 style="margin: 0; color: var(--accent);">${this.escapeHtml(circuit.name)}</h4>
+                        <h4 style="margin: 0; color: var(--accent);">${this.escapeHtml(circuit.name)} ${sourceIcon}</h4>
                         <p class="muted" style="margin: 4px 0 0 0; font-size: 0.85em;">
                             ${date} at ${time}
                         </p>
@@ -439,8 +471,8 @@ class CircuitStorageUI {
         `;
     }
 
-    handleLoad(circuitId, library) {
-        const result = this.storage.loadCircuit(circuitId);
+    async handleLoad(circuitId, library) {
+        const result = await this.storage.loadCircuit(circuitId);
         if (result.success) {
             library.remove();
             this.showNotification(`✅ Circuit "${result.circuit.name}" loaded!`, 'success');
@@ -449,14 +481,14 @@ class CircuitStorageUI {
         }
     }
 
-    handleDelete(circuitId, library) {
-        const circuit = this.storage.getCircuit(circuitId);
+    async handleDelete(circuitId, library) {
+        const circuit = await this.storage.getCircuit(circuitId);
         if (!confirm(`Are you sure you want to delete "${circuit.name}"?`)) return;
 
-        const result = this.storage.deleteCircuit(circuitId);
+        const result = await this.storage.deleteCircuit(circuitId);
         if (result.success) {
             library.remove();
-            this.showCircuitLibrary(); // Refresh library
+            this.showCircuitLibrary();
             this.showNotification('🗑️ Circuit deleted', 'success');
         } else {
             this.showNotification(`❌ Delete failed: ${result.error}`, 'error');
@@ -467,17 +499,17 @@ class CircuitStorageUI {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
-        input.onchange = (e) => {
+        input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = (event) => {
-                const result = this.storage.importCircuitFromJSON(event.target.result);
+            reader.onload = async (event) => {
+                const result = await this.storage.importCircuitFromJSON(event.target.result);
                 if (result.success) {
-                    this.showNotification(`✅ Circuit "${result.circuit.name}" imported!`, 'success');
-                    document.getElementById('circuitLibrary').remove();
-                    this.showCircuitLibrary(); // Refresh
+                    this.showNotification(`✅ Circuit imported!`, 'success');
+                    document.getElementById('circuitLibrary')?.remove();
+                    this.showCircuitLibrary();
                 } else {
                     this.showNotification(`❌ Import failed: ${result.error}`, 'error');
                 }
@@ -487,9 +519,9 @@ class CircuitStorageUI {
         input.click();
     }
 
-    showCircuitStats(circuitId) {
-        const stats = this.storage.getCircuitStats(circuitId);
-        const circuit = this.storage.getCircuit(circuitId);
+    async showCircuitStats(circuitId) {
+        const stats = await this.storage.getCircuitStats(circuitId);
+        const circuit = await this.storage.getCircuit(circuitId);
         if (!stats) return;
 
         const statsDialog = document.createElement('div');
@@ -503,6 +535,7 @@ class CircuitStorageUI {
                     <p><strong>Total Gates:</strong> ${stats.totalGates}</p>
                     <p><strong>Total Wires:</strong> ${stats.totalWires}</p>
                     <p><strong>Created:</strong> ${stats.created}</p>
+                    <p><strong>Storage:</strong> ${stats.source === 'database' ? 'Cloud ☁️' : 'Local 💾'}</p>
                     
                     <h4 style="margin-top: 16px;">Gate Breakdown:</h4>
                     ${Object.entries(stats.gateTypes).map(([type, count]) =>
