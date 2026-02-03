@@ -12,7 +12,7 @@ const LEVELS = Array.from({ length: 15 }, (_, i) => ({
 }));
 
 // =============================
-// 1) PROGRESSION (localStorage)
+// 1) PROGRESSION (DB si connecté, sinon localStorage)
 // =============================
 function defaultProgress() {
   return {
@@ -21,33 +21,67 @@ function defaultProgress() {
   };
 }
 
-function loadProgress() {
+// --- localStorage (fallback)
+function loadLocalProgress() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultProgress();
 
     const parsed = JSON.parse(raw);
-    // validation minimale
     const unlocked = Number(parsed.unlockedLevel);
     const completed = Array.isArray(parsed.completedLevels) ? parsed.completedLevels : [];
 
     return {
       unlockedLevel: Number.isFinite(unlocked) && unlocked >= 1 ? unlocked : 1,
-      completedLevels: completed
-        .map(Number)
-        .filter((n) => Number.isFinite(n) && n >= 1),
+      completedLevels: completed.map(Number).filter((n) => Number.isFinite(n) && n >= 1),
     };
   } catch {
     return defaultProgress();
   }
 }
 
-function saveProgress(p) {
+function saveLocalProgress(p) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
 }
 
-function resetProgress() {
-  saveProgress(defaultProgress());
+// --- DB (Supabase) si user connecté
+async function loadProgress() {
+  const userId = window.currentUserId;
+
+  // Pas connecté -> localStorage
+  if (!userId || !window.DatabaseService) return loadLocalProgress();
+
+  try {
+    const row = await window.DatabaseService.getProgress(userId);
+    return {
+      unlockedLevel: row.unlocked_level ?? 1,
+      completedLevels: Array.isArray(row.completed_levels) ? row.completed_levels : [],
+    };
+  } catch (err) {
+    console.warn("⚠️ DB getProgress failed -> fallback localStorage", err);
+    return loadLocalProgress();
+  }
+}
+
+async function saveProgress(p) {
+  const userId = window.currentUserId;
+
+  // Pas connecté -> localStorage
+  if (!userId || !window.DatabaseService) {
+    saveLocalProgress(p);
+    return;
+  }
+
+  try {
+    await window.DatabaseService.upsertProgress(userId, p.unlockedLevel, p.completedLevels);
+  } catch (err) {
+    console.warn("⚠️ DB upsertProgress failed -> fallback localStorage", err);
+    saveLocalProgress(p);
+  }
+}
+
+async function resetProgress() {
+  await saveProgress(defaultProgress());
 }
 
 function isUnlocked(levelId, progress) {
@@ -58,20 +92,19 @@ function isCompleted(levelId, progress) {
   return progress.completedLevels.includes(levelId);
 }
 
-function markVictory(levelId) {
-  const p = loadProgress();
+async function markVictory(levelId) {
+  const p = await loadProgress();
 
   if (!p.completedLevels.includes(levelId)) {
     p.completedLevels.push(levelId);
-    p.completedLevels.sort((a,b) => a - b);
+    p.completedLevels.sort((a, b) => a - b);
   }
 
-  // débloque le suivant seulement si on gagne le "dernier débloqué"
   if (levelId === p.unlockedLevel) {
     p.unlockedLevel = Math.min(levelId + 1, LEVELS.length);
   }
 
-  saveProgress(p);
+  await saveProgress(p);
   return p;
 }
 
@@ -80,15 +113,8 @@ function markVictory(levelId) {
 // =============================
 function parseRoute() {
   const hash = (location.hash || "#levels").replace("#", "");
-
-  // routes:
-  // levels
-  // play-3
-  // win-3
-  // lose-3
   const [name, idStr] = hash.split("-");
   const levelId = idStr ? Number(idStr) : null;
-
   return { name, levelId };
 }
 
@@ -103,27 +129,28 @@ const app = document.getElementById("app");
 // =============================
 // 3) RENDERS
 // =============================
-function render() {
+async function render() {
   const route = parseRoute();
-  const progress = loadProgress();
+  const progress = await loadProgress();
 
   if (route.name === "levels") return renderLevelSelect(progress);
 
   if (route.name === "play" && route.levelId) return renderPlay(route.levelId, progress);
 
-  if (route.name === "win" && route.levelId) return renderWin(route.levelId, progress);
+  if (route.name === "win" && route.levelId) return renderWin(route.levelId);
 
   if (route.name === "lose" && route.levelId) return renderLose(route.levelId, progress);
 
-  // fallback
   location.hash = "#levels";
 }
 
 function renderLevelSelect(progress) {
+  const saveMode = window.currentUserId ? "Supabase" : "localStorage";
+
   app.innerHTML = `
     <section class="panel">
       <h2 class="h2">Sélection des niveaux</h2>
-      <p class="muted">Progression sauvegardée automatiquement (localStorage).</p>
+      <p class="muted">Progression sauvegardée automatiquement (${saveMode}).</p>
 
       <div class="toolbar">
         <button class="btn danger" id="btnResetProgress">Réinitialiser la progression</button>
@@ -155,9 +182,9 @@ function renderLevelSelect(progress) {
     grid.appendChild(card);
   });
 
-  document.getElementById("btnResetProgress").addEventListener("click", () => {
-    resetProgress();
-    render();
+  document.getElementById("btnResetProgress").addEventListener("click", async () => {
+    await resetProgress();
+    await render();
   });
 
   grid.addEventListener("click", (e) => {
@@ -169,7 +196,6 @@ function renderLevelSelect(progress) {
 }
 
 function renderPlay(levelId, progress) {
-  // sécurité : pas jouer un niveau verrouillé
   if (!isUnlocked(levelId, progress)) {
     location.hash = "#levels";
     return;
@@ -197,7 +223,6 @@ function renderPlay(levelId, progress) {
             <button class="btn primary" id="btnCheck">Vérifier</button>
           </div>
 
-          <!-- Mode dev : utile tant que P2/P3/P4 pas branchés -->
           <div class="toolbar">
             <button class="btn ok" id="btnSimWin">Simuler victoire</button>
             <button class="btn danger" id="btnSimLose">Simuler défaite</button>
@@ -215,11 +240,6 @@ function renderPlay(levelId, progress) {
     </section>
   `;
 
-  // ---- hooks pour intégrer le moteur circuit
-  // Personne 2/3/4 peuvent exposer window.CircuitEngine avec:
-  // init(levelId, canvasElement)
-  // reset(levelId)
-  // getStatus(levelId) => { isWin:boolean, isLose?:boolean }
   const engine = window.CircuitEngine || null;
   const canvasHost = document.getElementById("canvasHost");
 
@@ -232,20 +252,16 @@ function renderPlay(levelId, progress) {
   });
 
   document.getElementById("btnResetLevel").addEventListener("click", () => {
-    if (engine && typeof engine.reset === "function") {
-      engine.reset(levelId);
-    }
-    setStatus(""); // nettoie l'affichage
+    if (engine && typeof engine.reset === "function") engine.reset(levelId);
+    setStatus("");
   });
 
   document.getElementById("btnCheck").addEventListener("click", () => {
-    // 1) si moteur branché -> on lit status
     if (engine && typeof engine.getStatus === "function") {
       const s = engine.getStatus(levelId);
       handleStatus(levelId, s);
       return;
     }
-    // 2) sinon -> message (tant que les autres pas prêts)
     setStatus("Moteur de circuit non branché. Utilise “Simuler victoire/défaite” pour tester le flow.");
   });
 
@@ -274,9 +290,8 @@ function renderPlay(levelId, progress) {
   }
 }
 
-function renderWin(levelId) {
-  // sauvegarde progression ici (au moment où on arrive sur win)
-  const newProgress = markVictory(levelId);
+async function renderWin(levelId) {
+  const newProgress = await markVictory(levelId);
 
   const nextId = Math.min(levelId + 1, LEVELS.length);
   const canGoNext = isUnlocked(nextId, newProgress) && nextId !== levelId;
@@ -311,7 +326,6 @@ function renderWin(levelId) {
 }
 
 function renderLose(levelId, progress) {
-  // sécurité : pas jouer un niveau verrouillé
   if (!isUnlocked(levelId, progress)) {
     location.hash = "#levels";
     return;
