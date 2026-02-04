@@ -71,7 +71,7 @@ window.AuthUI = {
 
     window.sb.auth.onAuthStateChange((event, session) => {
       console.log('🔄 Auth state changed:', event);
-      
+
       // Update UI when auth state changes
       this.renderAuthButtons();
 
@@ -312,7 +312,7 @@ window.AuthUI = {
       if (error) throw error;
 
       errorDiv.innerHTML = '<div class="overlay success">✅ Account created! Please check your email to verify.</div>';
-      
+
       setTimeout(() => {
         modal.remove();
         this.showNotification('Welcome to Hogwarts! Check your email. 📧', 'success');
@@ -335,7 +335,7 @@ window.AuthUI = {
       if (error) throw error;
 
       this.showNotification('Successfully logged out. See you soon! 👋', 'success');
-      
+
       // Redirect to levels page
       location.hash = '#levels';
 
@@ -366,7 +366,7 @@ window.AuthUI = {
     `;
 
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
       notification.style.animation = 'slideOut 0.3s ease';
       setTimeout(() => notification.remove(), 300);

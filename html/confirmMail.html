@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Confirmé - Hogwarts</title>
+    <style>
+        :root {
+            --primary: #1a1a2e;
+            --secondary: #16213e;
+            --accent: #e94560;
+            --gold: #ffd700;
+            --text: #eaeaea;
+            --muted: #a0a0a0;
+            --success: #4caf50;
+            --danger: #f44336;
+            --card-bg: #0f3460;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Particules magiques en arrière-plan */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            font-size: 20px;
+            animation: float 6s infinite ease-in-out;
+            opacity: 0.6;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 0.6;
+            }
+
+            90% {
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 48px 40px;
+            text-align: center;
+            animation: fadeInScale 0.8s ease;
+            position: relative;
+            z-index: 2;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .success-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, var(--success), #66bb6a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            animation: successPulse 1.5s ease-in-out;
+            box-shadow: 0 0 40px rgba(76, 175, 80, 0.4);
+            position: relative;
+        }
+
+        @keyframes successPulse {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .success-icon::before {
+            content: '';
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border: 3px solid var(--success);
+            border-radius: 50%;
+            animation: ripple 1.5s ease-out infinite;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 16px;
+            color: var(--gold);
+            text-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: var(--muted);
+            margin-bottom: 32px;
+            line-height: 1.6;
+            animation: fadeInUp 0.8s ease 0.3s both;
+        }
+
+        .welcome-box {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(102, 187, 106, 0.1));
+            border: 2px solid rgba(76, 175, 80, 0.3);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        .welcome-box h2 {
+            font-size: 24px;
+            color: var(--success);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .welcome-box p {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 32px 0;
+            animation: fadeInUp 0.8s ease 0.5s both;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 16px rgba(233, 69, 96, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .feature-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gold);
+            margin-bottom: 8px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, var(--accent), #ff6b9d);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(233, 69, 96, 0.4);
+            animation: fadeInUp 0.8s ease 0.6s both;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(233, 69, 96, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .redirect-info {
+            margin-top: 24px;
+            font-size: 14px;
+            color: var(--muted);
+            animation: fadeInUp 0.8s ease 0.7s both;
+        }
+
+        .countdown {
+            display: inline-block;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .loader {
+            display: none;
+            margin: 20px auto;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-state {
+            display: none;
+        }
+
+        .error-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, var(--danger), #ff6b6b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 32px 24px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .subtitle {
+                font-size: 16px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Particules magiques -->
+    <div class="particles" id="particles"></div>
+
+    <!-- État de chargement -->
+    <div class="container" id="loadingState">
+        <div class="loader"></div>
+        <h1 style="margin-top: 20px;">Vérification en cours...</h1>
+        <p class="subtitle">Activation de votre compte magique 🪄</p>
+    </div>
+
+    <!-- État de succès -->
+    <div class="container" id="successState" style="display: none;">
+        <div class="success-icon">
+            ✅
+        </div>
+
+        <h1>Email Confirmé !</h1>
+        <p class="subtitle">Bienvenue dans le monde magique de Poudlard ! 🎉</p>
+
+        <div class="welcome-box">
+            <h2>🪄 Votre compte est activé</h2>
+            <p>
+                Félicitations ! Votre adresse email a été vérifiée avec succès.
+                Vous êtes maintenant officiellement inscrit à Poudlard !
+            </p>
+            <p>
+                Préparez-vous à vivre une aventure extraordinaire remplie de défis,
+                de sorts et de mystères à résoudre.
+            </p>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📚</div>
+                <div class="feature-title">Cours Magiques</div>
+                <div class="feature-text">Apprenez des sorts puissants</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🏆</div>
+                <div class="feature-title">Progression</div>
+                <div class="feature-text">Suivez vos accomplissements</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Défis</div>
+                <div class="feature-text">Relevez des challenges</div>
+            </div>
+        </div>
+
+        <a href="../index.html" class="btn" id="continueBtn">
+            🎓 Commencer mon aventure
+        </a>
+
+        <div class="redirect-info">
+            Redirection automatique dans <span class="countdown" id="countdown">5</span> secondes...
+        </div>
+    </div>
+
+    <!-- État d'erreur -->
+    <div class="container error-state" id="errorState" style="display: none;">
+        <div class="error-icon">
+            ❌
+        </div>
+
+        <h1>Erreur de confirmation</h1>
+        <p class="subtitle">Impossible de vérifier votre email</p>
+
+        <div class="welcome-box"
+            style="background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(255, 107, 107, 0.1)); border-color: rgba(244, 67, 54, 0.3);">
+            <h2 style="color: var(--danger);">⚠️ Que s'est-il passé ?</h2>
+            <p id="errorMessage">
+                Le lien de confirmation a peut-être expiré ou a déjà été utilisé.
+            </p>
+            <p>
+                Essayez de vous connecter ou créez un nouveau compte si nécessaire.
+            </p>
+        </div>
+
+        <a href="../index.html" class="btn" style="background: linear-gradient(135deg, var(--danger), #ff6b6b);">
+            🔙 Retour à l'accueil
+        </a>
+    </div>
+
+    <script>
+        // Créer les particules magiques
+        function createParticles() {
+            const particles = document.getElementById('particles');
+            const emojis = ['✨', '⭐', '🌟', '💫', '🪄', '🔮'];
+
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                particles.appendChild(particle);
+            }
+        }
+
+        // Vérifier le token dans l'URL
+        async function verifyEmailToken() {
+            const loadingState = document.getElementById('loadingState');
+            const successState = document.getElementById('successState');
+            const errorState = document.getElementById('errorState');
+
+            // Afficher le loader
+            loadingState.querySelector('.loader').style.display = 'block';
+
+            try {
+                // Récupérer les paramètres de l'URL
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const searchParams = new URLSearchParams(window.location.search);
+
+                const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+                const type = hashParams.get('type') || searchParams.get('type');
+                const error = hashParams.get('error') || searchParams.get('error');
+                const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
+
+                // Vérifier s'il y a une erreur
+                if (error) {
+                    throw new Error(errorDescription || 'Email confirmation failed');
+                }
+
+                // Vérifier si c'est bien une confirmation d'email
+                if (type !== 'signup' && !accessToken) {
+                    throw new Error('Invalid confirmation link');
+                }
+
+                // Si on a un token, la confirmation a réussi
+                if (accessToken) {
+                    // Simuler un petit délai pour l'effet
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    // Afficher l'état de succès
+                    loadingState.style.display = 'none';
+                    successState.style.display = 'block';
+
+                    // Démarrer le compte à rebours
+                    startCountdown();
+
+                } else {
+                    throw new Error('No access token found');
+                }
+
+            } catch (error) {
+                console.error('Verification error:', error);
+
+                // Afficher l'état d'erreur
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+
+                // Afficher le message d'erreur spécifique
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = error.message || 'Une erreur est survenue lors de la vérification.';
+            }
+        }
+
+        // Compte à rebours avant redirection
+        function startCountdown() {
+            let seconds = 5;
+            const countdownElement = document.getElementById('countdown');
+            const continueBtn = document.getElementById('continueBtn');
+
+            const interval = setInterval(() => {
+                seconds--;
+                countdownElement.textContent = seconds;
+
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    window.location.href = continueBtn.href;
+                }
+            }, 1000);
+
+            // Arrêter le compte à rebours si l'utilisateur clique sur le bouton
+            continueBtn.addEventListener('click', () => {
+                clearInterval(interval);
+            });
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            verifyEmailToken();
+        });
+
+        // Vérifier aussi au changement de hash (si Supabase redirige avec hash)
+        window.addEventListener('hashchange', () => {
+            verifyEmailToken();
+        });
+    </script>
+</body>
+
+</html>
