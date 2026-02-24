@@ -133,6 +133,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Re-render maintenant que la session et la progression sont prêtes
   if (typeof render === 'function') render();
 
+  // Auto-start tutorial for first-time players
+  setTimeout(() => {
+    const progress = loadProgress();
+    const isFirstTime = progress.unlockedLevel === 1 && progress.completedLevels.length === 0;
+    
+    if (isFirstTime && window.tutorialSystem && !window.tutorialSystem.completedTutorial) {
+      console.log('🎓 First-time player detected - starting tutorial');
+      window.tutorialSystem.start();
+    }
+  }, 500);
+
   // Leaderboard button (navbar)
   const leaderboardBtn = document.getElementById('leaderboardBtn');
   if (leaderboardBtn) {

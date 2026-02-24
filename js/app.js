@@ -225,7 +225,7 @@ const APP_LEVELS = [
         id: 1,
         title: "The Lumos Charm",
         description: "Light up the wand by connecting both magical sources through an AND gate.",
-        hint: "Both inputs must be active (like casting Lumos with both hands) for the spell to work!",
+        hint: "🟢 Use an AND gate: Both inputs must be active (1) for the output to be 1. Connect both inputs to the AND gate, then connect the AND gate to the output.",
         availableGates: ['AND'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -238,7 +238,7 @@ const APP_LEVELS = [
         id: 2,
         title: "The Alohomora Spell",
         description: "Unlock the door using an OR gate - either key will work!",
-        hint: "In the wizarding world, sometimes you only need ONE key to open a door.",
+        hint: "🟡 Use an OR gate: The output is 1 if AT LEAST ONE input is 1. Connect both inputs to the OR gate, then connect it to the output.",
         availableGates: ['OR'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 0 },
@@ -251,7 +251,7 @@ const APP_LEVELS = [
         id: 3,
         title: "The Reversing Charm",
         description: "Use a NOT gate to reverse the magical polarity.",
-        hint: "What's true becomes false, what's false becomes true - like a magical mirror!",
+        hint: "🔴 Use a NOT gate: It reverses the input. If input is 1, output is 0. If input is 0, output is 1. Connect the input to the NOT gate, then to the output.",
         availableGates: ['NOT'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 175, value: 0 },
@@ -263,7 +263,7 @@ const APP_LEVELS = [
         id: 4,
         title: "The Patronus Challenge",
         description: "Combine AND and NOT gates to create the perfect Patronus.",
-        hint: "First combine the energies, then reverse the result!",
+        hint: "🟢🔴 Combine gates: First connect both inputs to an AND gate, then connect the AND gate's output to a NOT gate, then to the output. This creates a NAND gate!",
         availableGates: ['AND', 'NOT'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -276,7 +276,7 @@ const APP_LEVELS = [
         id: 5,
         title: "The Switching Spell",
         description: "Use XOR to create a spell that works with one input, but not both!",
-        hint: "XOR is like a see-saw - it only works when one side is down, not both!",
+        hint: "🟣 Use an XOR gate: Output is 1 when EXACTLY ONE input is 1 (but not both). Connect both inputs to the XOR gate, then to the output.",
         availableGates: ['XOR'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -289,7 +289,7 @@ const APP_LEVELS = [
         id: 6,
         title: "The Invisibility Cloak",
         description: "Create a circuit that outputs 1 only when exactly ONE input is active.",
-        hint: "You'll need both AND and NOT gates for this trick!",
+        hint: "💡 This is an XOR gate! You can build it with AND, OR, and NOT gates, or use the XOR gate directly. Hint: (A AND NOT B) OR (NOT A AND B)",
         availableGates: ['AND', 'NOT'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -302,7 +302,7 @@ const APP_LEVELS = [
         id: 7,
         title: "The Sorting Hat",
         description: "Build a circuit that determines if a wizard is in House Gryffindor (A=1, B=0) or Slytherin (A=0, B=1).",
-        hint: "You'll need OR gates and some clever thinking!",
+        hint: "💡 This is also an XOR gate! Output should be 1 when inputs are different. Try: (A AND NOT B) OR (NOT A AND B)",
         availableGates: ['OR', 'AND', 'NOT'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -315,7 +315,7 @@ const APP_LEVELS = [
         id: 8,
         title: "The Marauder's Map",
         description: "Create a circuit that lights up when at least TWO out of THREE inputs are active.",
-        hint: "Think about combinations! You might need multiple gates.",
+        hint: "💡 This is a majority gate! You need: (A AND B) OR (A AND C) OR (B AND C). Combine multiple AND gates with an OR gate.",
         availableGates: ['AND', 'OR'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 75, value: 1 },
@@ -329,7 +329,7 @@ const APP_LEVELS = [
         id: 9,
         title: "The Time-Turner",
         description: "Build a memory circuit that remembers if input A was ever active.",
-        hint: "You'll need to create a basic latch using NOR gates.",
+        hint: "💡 Advanced: Create an SR (Set-Reset) latch. Use OR gates: Output = (Set) OR (Output AND NOT Reset). This creates memory!",
         availableGates: ['OR', 'NOT', 'AND'],
         initialGates: [
             { id: 'set', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -342,7 +342,7 @@ const APP_LEVELS = [
         id: 10,
         title: "The Chamber of Secrets",
         description: "Create a full adder circuit that adds two binary numbers with a carry.",
-        hint: "This is the ultimate challenge! Use XOR for sum and AND for carry.",
+        hint: "🏆 Ultimate Challenge! Sum = A XOR B XOR Cin, Cout = (A AND B) OR (Cin AND (A XOR B)). Build it step by step!",
         availableGates: ['XOR', 'AND', 'OR'],
         initialGates: [
             { id: 'A', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -357,7 +357,7 @@ const APP_LEVELS = [
         id: 11,
         title: "The Triwizard Tournament",
         description: "Create a circuit that outputs 1 when the inputs form a binary number greater than 2.",
-        hint: "You need to compare binary values! Think about bit patterns.",
+        hint: "💡 Binary > 2 means: 11 (3) or higher. Output = bit1 AND bit2. When both bits are 1, the number is 3 or higher!",
         availableGates: ['AND', 'OR', 'NOT'],
         initialGates: [
             { id: 'bit1', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -370,7 +370,7 @@ const APP_LEVELS = [
         id: 12,
         title: "The Mirror of Erised",
         description: "Build a circuit that outputs the opposite of what a simple AND gate would output.",
-        hint: "Combine an AND gate with a NOT gate in a clever way.",
+        hint: "🔴 This is a NAND gate! Connect both inputs to an AND gate, then connect the AND output to a NOT gate, then to the output.",
         availableGates: ['AND', 'NOT'],
         initialGates: [
             { id: 'input1', type: 'INPUT', x: 80, y: 100, value: 1 },
@@ -574,10 +574,12 @@ function renderLevelSelect(progress) {
       <p class="muted">Master the ancient art of magical circuit crafting</p>
 
       <div class="toolbar">
-        <button class="btn danger" id="btnResetProgress">Reset Progress</button>
+        <button class="btn" id="btnTutorial">🎓 Tutorial</button>
+        <button class="btn" id="btnGatesGuide">🔮 Gates Guide</button>
         <button class="btn" id="btnMyCircuits">📚 My Circuits</button>
         <button class="btn" id="btnAchievements">🏆 Achievements (${achStats.unlocked}/${achStats.total})</button>
         <button class="btn primary" id="btnLeaderboard">📊 Leaderboard</button>
+        <button class="btn danger" id="btnResetProgress">Reset Progress</button>
       </div>
 
       <div style="margin-top:14px" class="level-grid" id="levelGrid"></div>
@@ -606,10 +608,15 @@ function renderLevelSelect(progress) {
         grid.appendChild(card);
     });
 
-    document.getElementById("btnResetProgress").addEventListener("click", () => {
-        if (confirm("Reset all progress? This will not reset achievements.")) {
-            resetProgress();
-            render();
+    document.getElementById("btnTutorial").addEventListener("click", () => {
+        if (window.tutorialSystem) {
+            window.tutorialSystem.start(true); // Force replay even if completed
+        }
+    });
+
+    document.getElementById("btnGatesGuide").addEventListener("click", () => {
+        if (window.gatesGuide) {
+            window.gatesGuide.open();
         }
     });
 
@@ -624,6 +631,13 @@ function renderLevelSelect(progress) {
     document.getElementById("btnLeaderboard").addEventListener("click", () => {
         if (window.leaderboardUI) {
             window.leaderboardUI.open();
+        }
+    });
+
+    document.getElementById("btnResetProgress").addEventListener("click", () => {
+        if (confirm("Reset all progress? This will not reset achievements.")) {
+            resetProgress();
+            render();
         }
     });
 
