@@ -104,6 +104,14 @@ class WireSystem {
                 window.circuitCalculator.addConnection(fromGateId, toGateId);
             }
 
+            // Synchroniser avec le multijoueur
+            if (window.multiplayerSync && window.multiplayerSync.syncEnabled) {
+                console.log('📤 Synchronisation ajout de fil:', wire);
+                window.multiplayerSync.syncAddWire(wire);
+            } else {
+                console.log('⚠️ Sync désactivé pour les fils');
+            }
+
             this.canvas.dispatchEvent(new CustomEvent('wireCreated', { detail: wire }));
         }
         this.cancelWireCreation();
@@ -111,9 +119,17 @@ class WireSystem {
 
     removeWireAtPosition(x, y) {
         const initialLength = this.wires.length;
+        const removedWires = this.wires.filter(wire => this.isPointNearWire(x, y, wire));
         this.wires = this.wires.filter(wire => !this.isPointNearWire(x, y, wire));
 
         if (this.wires.length < initialLength) {
+            // Synchroniser avec le multijoueur
+            if (window.multiplayerSync && window.multiplayerSync.syncEnabled) {
+                removedWires.forEach(wire => {
+                    window.multiplayerSync.syncRemoveWire(wire.id);
+                });
+            }
+
             this.canvas.dispatchEvent(new CustomEvent('wireRemoved'));
             this.render();
         }
@@ -130,6 +146,7 @@ class WireSystem {
         if (!window.gateSystem) return;
 
         const ports = window.gateSystem.getAllPorts(); // Get fresh port data
+        let wireUpdated = false;
 
         this.wires.forEach(wire => {
             if (wire.from.gateId === gateId) {
@@ -141,6 +158,7 @@ class WireSystem {
                 if (newPort) {
                     wire.from.x = newPort.x;
                     wire.from.y = newPort.y;
+                    wireUpdated = true;
                 }
             }
             if (wire.to.gateId === gateId) {
@@ -152,11 +170,18 @@ class WireSystem {
                 if (newPort) {
                     wire.to.x = newPort.x;
                     wire.to.y = newPort.y;
+                    wireUpdated = true;
                 }
             }
         });
 
-        this.render();
+        if (wireUpdated) {
+            this.render();
+            // Force immediate canvas redraw
+            if (this.onRender) {
+                this.onRender(this.wires, this.currentWire);
+            }
+        }
     }
     isPointNearWire(x, y, wire) {
         const midX = (wire.from.x + wire.to.x) / 2;
@@ -182,6 +207,40 @@ class WireSystem {
     clearAll() {
         this.wires = [];
         this.cancelWireCreation();
+        this.render();
+    }
+
+    // Méthodes pour la synchronisation multijoueur
+    addWire(from, to, id = null) {
+        const wireId = id || 'wire_' + Date.now();
+        const wire = {
+            id: wireId,
+            from: from,
+            to: to
+        };
+        this.wires.push(wire);
+
+        // Notify circuit calculator
+        if (window.circuitCalculator) {
+            const fromGateId = from.type === 'output' ? from.gateId : to.gateId;
+            const toGateId = from.type === 'input' ? from.gateId : to.gateId;
+            window.circuitCalculator.addConnection(fromGateId, toGateId);
+        }
+
+        this.render();
+        return wire;
+    }
+
+    removeWire(wireId) {
+        const initialLength = this.wires.length;
+        this.wires = this.wires.filter(wire => wire.id !== wireId);
+
+        if (this.wires.length < initialLength) {
+            this.render();
+        }
+    }
+
+    redrawWires() {
         this.render();
     }
 }

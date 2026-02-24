@@ -45,6 +45,13 @@ class GateSystem {
     addGate(type, x = null, y = null, id = null) {
         const gateId = id || `gate_${this.gateIdCounter++}`;
 
+        // Check if gate with this ID already exists - if so, return existing gate
+        const existingGate = this.placedGates.find(g => g.id === gateId);
+        if (existingGate) {
+            console.log(`⚠️ Gate ${gateId} already exists, skipping duplicate`);
+            return existingGate;
+        }
+
         // If no position specified, find a good spot
         let finalX = x;
         let finalY = y;
@@ -93,6 +100,14 @@ class GateSystem {
         // Notify circuit calculator with the same ID
         if (window.circuitCalculator) {
             window.circuitCalculator.addGate(type, gate.value, gateId);
+        }
+
+        // Synchroniser avec le multijoueur
+        if (window.multiplayerSync && window.multiplayerSync.syncEnabled) {
+            console.log('📤 Synchronisation ajout de porte:', gate);
+            window.multiplayerSync.syncAddGate(gate);
+        } else {
+            console.log('⚠️ Sync désactivé ou multiplayerSync non disponible');
         }
 
         return gate;
@@ -246,6 +261,18 @@ class GateSystem {
             this.draggedGate.element.style.zIndex = ''; // Reset z-index
         }
 
+        // Synchroniser le déplacement avec le multijoueur
+        if (window.multiplayerSync && window.multiplayerSync.syncEnabled) {
+            console.log('📤 Synchronisation déplacement de porte:', this.draggedGate.id, this.draggedGate.x, this.draggedGate.y);
+            window.multiplayerSync.syncMoveGate(
+                this.draggedGate.id,
+                this.draggedGate.x,
+                this.draggedGate.y
+            );
+        } else {
+            console.log('⚠️ Sync désactivé pour le déplacement');
+        }
+
         this.draggedGate = null;
 
         // Restore text selection
@@ -299,7 +326,17 @@ class GateSystem {
             if (window.circuitCalculator) {
                 window.circuitCalculator.removeGate(gateId);
             }
+
+            // Synchroniser avec le multijoueur
+            if (window.multiplayerSync && window.multiplayerSync.syncEnabled) {
+                window.multiplayerSync.syncRemoveGate(gateId);
+            }
         }
+    }
+
+    // Alias pour la compatibilité avec multiplayerSync
+    removeGate(gateId) {
+        this.deleteGate(gateId);
     }
 
     getAllPorts() {

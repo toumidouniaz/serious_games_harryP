@@ -64,24 +64,18 @@ window.AuthUI = {
   },
 
   /**
-   * Setup auth state change listener
+   * Setup auth state change listener (only for UI updates, main listener is in main.js)
    */
   setupAuthListeners() {
     if (!window.sb) return;
 
+    // Only listen for UI updates, don't trigger full re-renders here
+    // The main auth listener in main.js handles the full logic
     window.sb.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state changed:', event);
+      console.log('🔄 AuthUI: Auth state changed:', event);
 
-      // Update UI when auth state changes
+      // Update UI buttons only
       this.renderAuthButtons();
-
-      // Reload page content if needed
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        // Trigger a re-render of the current page
-        if (typeof render === 'function') {
-          render();
-        }
-      }
     });
   },
 

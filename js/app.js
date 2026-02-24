@@ -393,7 +393,7 @@ function defaultProgress() {
 
 function loadProgress() {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(APP_STORAGE_KEY);
         if (!raw) return defaultProgress();
 
         const parsed = JSON.parse(raw);
@@ -412,7 +412,7 @@ function loadProgress() {
 }
 
 function saveProgress(p) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(p));
 }
 
 function resetProgress() {
@@ -441,6 +441,35 @@ function markVictory(levelId) {
 
     saveProgress(p);
 
+    // If user is logged in, also save to database
+    if (window.currentUserId && window.DatabaseService) {
+        window.DatabaseService.upsertProgress(
+            window.currentUserId,
+            p.unlockedLevel,
+            p.completedLevels
+        ).catch(error => {
+            console.error('❌ Failed to save progress to database:', error);
+            // Don't throw - local progress is still saved
+        });
+    }
+
+    // Submit score to leaderboard
+    if (window.leaderboard) {
+        const completionTime = window.levelStartTime ? 
+            Math.floor((Date.now() - window.levelStartTime) / 1000) : 0;
+        
+        // Calculate score based on time (faster = higher score)
+        // Base score: 1000 points, minus 1 point per second
+        const score = Math.max(100, 1000 - completionTime);
+        
+        const playerName = window.currentUserId ? 
+            (localStorage.getItem('playerEmail') || 'Joueur') : 
+            localStorage.getItem('playerName') || 'Joueur';
+        
+        window.leaderboard.submitScore(playerName, levelId, score, completionTime);
+        console.log(`📊 Score soumis au classement: ${playerName} - Niveau ${levelId} - ${score} points en ${completionTime}s`);
+    }
+
     // Trigger achievement check
     achievementManager.checkEvent({ type: "LEVEL_COMPLETE", levelId: levelId });
 
@@ -458,26 +487,81 @@ function parseRoute() {
     return { name, levelId };
 }
 
-window.addEventListener("hashchange", render);
+window.addEventListener("hashchange", () => {
+    console.log('🔄 Hash changed to:', location.hash);
+    render();
+});
+
 window.addEventListener("load", () => {
     if (!location.hash) location.hash = "#levels";
     render();
+
+    // Ajouter un écouteur sur le bouton multijoueur pour afficher directement le lobby
+    const navMultiplayer = document.getElementById('navMultiplayer');
+    if (navMultiplayer) {
+        navMultiplayer.addEventListener('click', (e) => {
+            e.preventDefault(); // Empêcher le comportement par défaut
+            console.log('🎮 Clic sur Multijoueur détecté');
+            console.log('   - Hash actuel:', location.hash);
+            console.log('   - multiplayerUI disponible?', !!window.multiplayerUI);
+            console.log('   - renderLobby disponible?', typeof window.multiplayerUI?.renderLobby);
+
+            // Afficher directement le lobby sans passer par le hash
+            if (window.multiplayerUI && typeof window.multiplayerUI.renderLobby === 'function') {
+                console.log('✅ Affichage direct du lobby');
+                window.multiplayerUI.renderLobby();
+                // Mettre à jour le hash après pour la cohérence
+                history.replaceState(null, '', '#multiplayer');
+            } else {
+                console.error('❌ multiplayerUI non disponible au moment du clic');
+                alert('Le système multijoueur n\'est pas encore chargé. Veuillez recharger la page (Ctrl+F5).');
+            }
+        });
+    }
 });
 
 // =============================
 // RENDERS
 // =============================
 function render() {
+    console.log('📍 render() appelé, hash actuel:', location.hash);
     const route = parseRoute();
+    console.log('📍 Route parsée:', route);
     const progress = loadProgress();
 
-    if (route.name === "levels") return renderLevelSelect(progress);
+    if (route.name === "levels") {
+        console.log('📍 Rendu de la sélection de niveaux');
+        return renderLevelSelect(progress);
+    }
     if (route.name === "play" && route.levelId) return renderPlay(route.levelId, progress);
     if (route.name === "win" && route.levelId) return renderWin(route.levelId, progress);
     if (route.name === "lose" && route.levelId) return renderLose(route.levelId, progress);
     if (route.name === "achievements") return achievementManager.renderPage();
     if (route.name === "leaderboard") return renderLeaderboard();
+    if (route.name === "multiplayer") {
+        console.log('🎮 Route multiplayer détectée');
+        console.log('   - window.multiplayerUI:', window.multiplayerUI);
+        console.log('   - renderLobby:', window.multiplayerUI?.renderLobby);
 
+        if (window.multiplayerUI && typeof window.multiplayerUI.renderLobby === 'function') {
+            console.log('✅ Rendu du lobby multijoueur');
+            return window.multiplayerUI.renderLobby();
+        } else {
+            console.error('❌ multiplayerUI non disponible');
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <section class="section">
+                    <h2>❌ Erreur</h2>
+                    <p>Le système multijoueur n'est pas chargé correctement.</p>
+                    <p>Veuillez recharger la page (Ctrl+F5).</p>
+                    <button class="btn" onclick="location.reload(true)">Recharger</button>
+                </section>
+            `;
+            return;
+        }
+    }
+
+    console.log('⚠️ Route non reconnue:', route.name, '- Redirection vers #levels');
     location.hash = "#levels";
 }
 
@@ -563,8 +647,10 @@ function renderPlay(levelId, progress) {
         return;
     }
 
-    // Start timing for achievements
+    // Start timing for achievements and multiplayer
     achievementManager.startLevel();
+    window.levelStartTime = Date.now(); // Pour le chronomètre multijoueur
+    window.currentLevel = lvl; // Stocker le niveau actuel pour le multijoueur
 
     app.innerHTML = `
     <section class="panel">
@@ -709,6 +795,16 @@ function initializeGameEngine(level) {
     wireCanvas.addEventListener('wireCreated', updateCircuitDisplay);
     wireCanvas.addEventListener('wireRemoved', updateCircuitDisplay);
 
+    // Synchronisation des curseurs en mode multijoueur
+    if (window.multiplayerSync && window.multiplayerSync.isMultiplayerMode) {
+        canvasHost.addEventListener('mousemove', (e) => {
+            const rect = canvasHost.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            window.multiplayerSync.syncCursorPosition(x, y);
+        });
+    }
+
     updateCircuitDisplay();
 }
 
@@ -718,6 +814,11 @@ function toggleInput(inputId) {
 
     gate.value = gate.value === 1 ? 0 : 1;
     window.circuitCalculator.setGateValue(inputId, gate.value);
+
+    // Synchroniser la valeur d'entrée avec les autres joueurs en mode multijoueur
+    if (window.multiplayerSync && window.multiplayerSync.isMultiplayerMode && window.multiplayerClient) {
+        window.multiplayerClient.syncInputValue(inputId, gate.value);
+    }
 
     const btn = document.getElementById(`input_${inputId}`);
     if (btn) {
@@ -730,6 +831,9 @@ function toggleInput(inputId) {
 
 function updateCircuitDisplay() {
     const result = window.circuitCalculator.calculateAll();
+
+    // Track OUTPUT values for synchronization in multiplayer
+    const outputChanges = {};
 
     window.gateSystem.placedGates.forEach(gate => {
         const value = result.allGates.get(gate.id);
@@ -759,8 +863,20 @@ function updateCircuitDisplay() {
         font-weight: bold;
       `;
             gate.element.appendChild(badge);
+            
+            // Track OUTPUT gate value changes for multiplayer sync
+            if (gate.type === 'OUTPUT') {
+                outputChanges[gate.id] = value;
+            }
         }
     });
+    
+    // Sync OUTPUT values to other players in multiplayer mode
+    if (window.multiplayerSync && window.multiplayerSync.isMultiplayerMode && Object.keys(outputChanges).length > 0) {
+        if (window.multiplayerClient) {
+            window.multiplayerClient.syncOutputValues(outputChanges);
+        }
+    }
 }
 
 function checkSolution(level) {
@@ -814,7 +930,42 @@ function checkSolution(level) {
         return false;
     }
 
-    showVictoryPopup(level.id);
+// Vérifier si on est en mode multijoueur
+    if (window.multiplayerSync && window.multiplayerSync.isMultiplayerMode) {
+        // Calculer le temps écoulé
+        const completionTime = window.levelStartTime ?
+            Math.floor((Date.now() - window.levelStartTime) / 1000) : 0;
+
+        // Mode multijoueur - afficher l'écran de victoire collaborative
+        // Compter seulement les portes logiques (pas INPUT/OUTPUT)
+        const logicGatesCount = placedGates.filter(g => g.type !== 'INPUT' && g.type !== 'OUTPUT').length;
+
+        const teamStats = {
+            totalTime: completionTime,
+            gatesPlaced: logicGatesCount,
+            wiresConnected: window.wireSystem ? window.wireSystem.wires.length : 0,
+            players: window.multiplayerSync.getPlayerContributions()
+        };
+
+        // Sauvegarder la progression IMMÉDIATEMENT avant d'afficher l'écran de victoire
+        markVictory(level.id);
+
+        // Notifier les autres joueurs APRÈS avoir sauvegardé la progression
+        if (window.multiplayerClient) {
+            window.multiplayerClient.levelCompleted(level.id, completionTime, teamStats);
+        }
+
+        // Afficher l'écran de victoire après un court délai pour synchroniser
+        setTimeout(() => {
+            if (window.multiplayerUI) {
+                window.multiplayerUI.showCollaborativeVictory(level, teamStats);
+            }
+        }, 500);
+    } else {
+        // Mode solo - afficher le popup normal
+        showVictoryPopup(level.id);
+    }
+
     return true;
 }
 

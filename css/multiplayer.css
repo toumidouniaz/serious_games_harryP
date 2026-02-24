@@ -1,0 +1,283 @@
+/* ============================================
+   Styles Multijoueur
+   Hogwarts Logic Academy
+   ============================================ */
+
+.multiplayer-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin: 30px 0;
+}
+
+.multiplayer-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+}
+
+.multiplayer-card h3 {
+    margin-top: 0;
+    color: var(--accent);
+    font-size: 1.5rem;
+}
+
+.multiplayer-card p {
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.status-message {
+    padding: 12px;
+    border-radius: 8px;
+    margin: 20px 0;
+    text-align: center;
+    display: none;
+}
+
+.status-message.info {
+    background: rgba(139, 92, 246, 0.2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+}
+
+.status-message.success {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid var(--ok);
+    color: var(--ok);
+}
+
+.status-message.error {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+/* Salle d'attente */
+.room-code-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 30px 0;
+}
+
+.room-code {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--accent);
+    background: var(--panel);
+    padding: 20px 40px;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    letter-spacing: 4px;
+    font-family: 'Courier New', monospace;
+}
+
+/* Liste des joueurs */
+.players-section {
+    margin: 30px 0;
+}
+
+.players-section h3 {
+    color: var(--accent);
+    margin-bottom: 16px;
+}
+
+.players-list {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.player-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+}
+
+.player-item.ready {
+    border-color: var(--ok);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.player-name {
+    font-weight: bold;
+    color: var(--text);
+}
+
+.player-status {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.player-item.ready .player-status {
+    color: var(--ok);
+}
+
+/* Contrôles */
+.host-controls,
+.player-controls {
+    margin: 30px 0;
+    text-align: center;
+}
+
+.btn-large {
+    font-size: 1.2rem;
+    padding: 16px 32px;
+}
+
+.hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 12px;
+}
+
+/* Chat */
+.chat-section {
+    margin: 30px 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.chat-section h3 {
+    margin-top: 0;
+    color: var(--accent);
+}
+
+.chat-messages {
+    height: 200px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.chat-message {
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.chat-message.system {
+    background: rgba(139, 92, 246, 0.1);
+    border-left: 3px solid var(--accent);
+    font-style: italic;
+}
+
+.chat-username {
+    font-weight: bold;
+    color: var(--accent);
+    margin-right: 8px;
+}
+
+.chat-text {
+    color: var(--text);
+}
+
+.chat-input-container {
+    display: flex;
+    gap: 12px;
+}
+
+.chat-input-container .input-field {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* Scrollbar personnalisée */
+.chat-messages::-webkit-scrollbar,
+.players-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track,
+.players-list::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb,
+.players-list::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover,
+.players-list::-webkit-scrollbar-thumb:hover {
+    background: #9d6fff;
+}
+
+/* Animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.multiplayer-card,
+.room-code-display,
+.players-section,
+.chat-section {
+    animation: slideIn 0.5s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .multiplayer-container {
+        grid-template-columns: 1fr;
+    }
+
+    .room-code {
+        font-size: 2rem;
+        padding: 16px 24px;
+    }
+
+    .room-code-display {
+        flex-direction: column;
+    }
+
+    .btn-large {
+        font-size: 1rem;
+        padding: 12px 24px;
+    }
+}
+
