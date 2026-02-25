@@ -23,7 +23,7 @@ const ACHIEVEMENTS = [
     { id: 12, title: "🪞 Mirror Master", description: "Complete Level 12 - The Mirror of Erised", condition: lvl => lvl === 12 },
     { id: 13, title: "⚡ Speed Demon", description: "Complete any level in under 2 minutes", condition: (lvl, time) => time && time < 120 },
     { id: 14, title: "🎯 Perfectionist", description: "Complete 5 levels in a row without reset", condition: lvl => false }, // Special tracking
-    { id: 15, title: "🌟 Logic Legend", description: "Complete all 12 levels", condition: lvl => false }, // Special check
+    { id: 15, title: "🌟 Logic Legend", description: "Complete all levels", condition: lvl => false }, // Special check
 ];
 
 const ACHIEVEMENTS_STORAGE_KEY = "hp_logic_achievements";
@@ -68,7 +68,7 @@ const achievementManager = {
 
             // Check if all levels completed
             const progress = loadProgress();
-            if (progress.completedLevels.length >= 12) {
+            if (progress.completedLevels.length >= APP_LEVELS.length) {
                 const legendAch = ACHIEVEMENTS.find(a => a.id === 15);
                 if (legendAch && !this.data[15]) {
                     this.unlock(legendAch);
@@ -378,6 +378,79 @@ const APP_LEVELS = [
             { id: 'output', type: 'OUTPUT', x: 700, y: 175 }
         ],
         targetOutputs: { output: 0 }
+    },
+    {
+        id: 13,
+        title: "The Forbidden Forest",
+        description: "Output 1 only when at least three of four inputs are active (3-of-4 majority).",
+        hint: "Use combinations of AND to make all triplets, then OR them together: (A&B&C) | (A&B&D) | (A&C&D) | (B&C&D)",
+        availableGates: ['AND', 'OR'],
+        initialGates: [
+            { id: 'A', type: 'INPUT', x: 80, y: 60, value: 1 },
+            { id: 'B', type: 'INPUT', x: 80, y: 150, value: 1 },
+            { id: 'C', type: 'INPUT', x: 80, y: 240, value: 1 },
+            { id: 'D', type: 'INPUT', x: 80, y: 330, value: 0 },
+            { id: 'OUT', type: 'OUTPUT', x: 720, y: 195 }
+        ],
+        targetOutputs: { OUT: 1 }
+    },
+    {
+        id: 14,
+        title: "Room of Requirement",
+        description: "Build a 3-input parity checker that outputs 1 when an odd number of inputs are 1.",
+        hint: "Parity3 = A XOR B XOR C. You can also build from AND/OR/NOT: (A^B)^C",
+        availableGates: ['XOR', 'AND', 'OR', 'NOT'],
+        initialGates: [
+            { id: 'A', type: 'INPUT', x: 80, y: 90, value: 1 },
+            { id: 'B', type: 'INPUT', x: 80, y: 190, value: 0 },
+            { id: 'C', type: 'INPUT', x: 80, y: 290, value: 1 },
+            { id: 'P', type: 'OUTPUT', x: 720, y: 190 }
+        ],
+        targetOutputs: { P: 0 }
+    },
+    {
+        id: 15,
+        title: "Order of the Phoenix",
+        description: "Detect pattern A=1, B=1, C=0 on three inputs exactly.",
+        hint: "Use AND with a NOT on C: A & B & ~C",
+        availableGates: ['AND', 'NOT'],
+        initialGates: [
+            { id: 'A', type: 'INPUT', x: 80, y: 90, value: 1 },
+            { id: 'B', type: 'INPUT', x: 80, y: 190, value: 1 },
+            { id: 'C', type: 'INPUT', x: 80, y: 290, value: 0 },
+            { id: 'OUT', type: 'OUTPUT', x: 720, y: 190 }
+        ],
+        targetOutputs: { OUT: 1 }
+    },
+    {
+        id: 16,
+        title: "Battle of Hogwarts",
+        description: "Two outputs: OUT1 is majority of A,B,C. OUT2 is (A XOR B) AND (B XOR C).",
+        hint: "OUT1 = majority3, OUT2 detects exactly two inputs different: (A^B)&(B^C)",
+        availableGates: ['AND', 'OR', 'XOR'],
+        initialGates: [
+            { id: 'A', type: 'INPUT', x: 80, y: 70, value: 1 },
+            { id: 'B', type: 'INPUT', x: 80, y: 170, value: 1 },
+            { id: 'C', type: 'INPUT', x: 80, y: 270, value: 0 },
+            { id: 'OUT1', type: 'OUTPUT', x: 720, y: 150 },
+            { id: 'OUT2', type: 'OUTPUT', x: 720, y: 250 }
+        ],
+        targetOutputs: { OUT1: 1, OUT2: 0 }
+    },
+    {
+        id: 17,
+        title: "Hallows Unveiled",
+        description: "Build a 4-input NAND of conjunctions: OUT = NOT((A&B) AND (C&D)).",
+        hint: "Make two ANDs then an AND, then NOT the result",
+        availableGates: ['AND', 'NOT'],
+        initialGates: [
+            { id: 'A', type: 'INPUT', x: 80, y: 60, value: 1 },
+            { id: 'B', type: 'INPUT', x: 80, y: 150, value: 1 },
+            { id: 'C', type: 'INPUT', x: 80, y: 240, value: 1 },
+            { id: 'D', type: 'INPUT', x: 80, y: 330, value: 1 },
+            { id: 'OUT', type: 'OUTPUT', x: 720, y: 195 }
+        ],
+        targetOutputs: { OUT: 0 }
     }
 ];
 
@@ -676,12 +749,15 @@ function renderPlay(levelId, progress) {
             <div><b>💡 Hint:</b> ${lvl.hint}</div>
         </div>
 
-        <div class="toolbar">
+        <div class="toolbar" id="topToolbar">
             <button class="btn" id="btnBack">← Back</button>
             <button class="btn" id="btnResetLevel">🔄 Reset</button>
             <button class="btn" id="btnSaveCircuit">💾 Save Circuit</button>
             <button class="btn" id="btnLoadCircuit">📂 My Circuits</button>
-            <button class="btn primary" id="btnCheck">✨ Cast Spell</button>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+              <div id="timerDisplay" class="badge" style="padding:6px 10px; border-radius:8px; background: var(--muted); color:white; font-weight:600;">⏳ --:--</div>
+              <button class="btn primary" id="btnCheck">✨ Cast Spell</button>
+            </div>
         </div>
 
         <div class="row" style="margin-top: 12px;">
@@ -743,6 +819,42 @@ function initializeGameEngine(level) {
     // Start wire animation
     window.wireRenderer.startAnimation();
 
+    // Initialize timer
+    try {
+        const display = document.getElementById('timerDisplay');
+        const getTimeLimitForLevel = (lvl) => {
+            if (lvl.id <= 3) return 180;
+            if (lvl.id <= 6) return 240;
+            if (lvl.id <= 10) return 300;
+            if (lvl.id <= 14) return 360;
+            return 420;
+        };
+        let remaining = getTimeLimitForLevel(level);
+        window.levelTimeRemaining = remaining;
+        if (display) display.textContent = `⏳ ${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;
+        if (window.levelTimerInterval) clearInterval(window.levelTimerInterval);
+        window.levelTimerInterval = setInterval(() => {
+            remaining -= 1;
+            window.levelTimeRemaining = remaining;
+            const d = document.getElementById('timerDisplay');
+            if (d) {
+                const mm = String(Math.floor(remaining/60)).padStart(2,'0');
+                const ss = String(Math.max(0, remaining%60)).padStart(2,'0');
+                d.textContent = `⏳ ${mm}:${ss}`;
+                if (remaining <= 30) d.style.background = 'var(--danger)';
+                else if (remaining <= 90) d.style.background = 'var(--accent)';
+                else d.style.background = 'var(--muted)';
+            }
+            if (remaining <= 0) {
+                clearInterval(window.levelTimerInterval);
+                window.levelTimerInterval = null;
+                location.hash = `#lose-${level.id}`;
+            }
+        }, 1000);
+    } catch (e) {
+        console.warn('Timer init failed:', e);
+    }
+
     // Add initial gates
     level.initialGates.forEach(gateData => {
         const gate = window.gateSystem.addGate(gateData.type, gateData.x, gateData.y, gateData.id);
@@ -767,7 +879,7 @@ function initializeGameEngine(level) {
             const y = startY + Math.floor(index / 3) * spacing;
 
             window.gateSystem.addGate(gateType, x, y);
-            updateCircuitDisplay();
+            window.updateCircuitDisplay();
         };
         gatePalette.appendChild(btn);
     });
@@ -794,7 +906,7 @@ function initializeGameEngine(level) {
     });
 
     document.getElementById("btnCheck").addEventListener("click", () => {
-        checkSolution(level);
+        window.checkSolution(level);
     });
 
     document.getElementById("btnSaveCircuit").addEventListener("click", () => {
@@ -806,8 +918,8 @@ function initializeGameEngine(level) {
     });
 
     // Listen for wire changes
-    wireCanvas.addEventListener('wireCreated', updateCircuitDisplay);
-    wireCanvas.addEventListener('wireRemoved', updateCircuitDisplay);
+    wireCanvas.addEventListener('wireCreated', () => window.updateCircuitDisplay());
+    wireCanvas.addEventListener('wireRemoved', () => window.updateCircuitDisplay());
 
     // Synchronisation des curseurs en mode multijoueur
     if (window.multiplayerSync && window.multiplayerSync.isMultiplayerMode) {
@@ -819,7 +931,7 @@ function initializeGameEngine(level) {
         });
     }
 
-    updateCircuitDisplay();
+    window.updateCircuitDisplay();
 }
 
 function toggleInput(inputId) {
@@ -840,7 +952,7 @@ function toggleInput(inputId) {
         btn.className = gate.value === 1 ? 'btn ok' : 'btn';
     }
 
-    updateCircuitDisplay();
+    window.updateCircuitDisplay();
 }
 
 function updateCircuitDisplay() {
@@ -899,7 +1011,7 @@ function checkSolution(level) {
     for (const [outputId, targetValue] of Object.entries(level.targetOutputs)) {
         const actualValue = result.outputs.get(outputId);
         if (actualValue !== targetValue) {
-            setStatus("❌ The magic fizzled out! Check your connections and try again.");
+            window.setStatus("❌ The magic fizzled out! Check your connections and try again.");
             return false;
         }
     }
@@ -910,7 +1022,7 @@ function checkSolution(level) {
     );
 
     if (connectionsToOutput.length === 0) {
-        setStatus("❌ No spell connected to the wand! You need to connect a gate to the output.");
+        window.setStatus("❌ No spell connected to the wand! You need to connect a gate to the output.");
         return false;
     }
 
@@ -920,7 +1032,7 @@ function checkSolution(level) {
     ).length;
 
     if (logicGateCount === 0) {
-        setStatus("❌ You need to place at least one spell gate! Use the available spells below.");
+        window.setStatus("❌ You need to place at least one spell gate! Use the available spells below.");
         return false;
     }
 
@@ -940,7 +1052,7 @@ function checkSolution(level) {
     const unconnectedLogicGates = logicGates.filter(id => !connectedGates.has(id));
 
     if (unconnectedLogicGates.length > 0) {
-        setStatus("❌ Some spells are not connected! Make sure all gates are properly linked.");
+        window.setStatus("❌ Some spells are not connected! Make sure all gates are properly linked.");
         return false;
     }
 
@@ -977,7 +1089,13 @@ function checkSolution(level) {
         }, 500);
     } else {
         // Mode solo - afficher le popup normal
-        showVictoryPopup(level.id);
+        window.showVictoryPopup(level.id);
+    }
+
+    // Stop timer on win
+    if (window.levelTimerInterval) {
+        clearInterval(window.levelTimerInterval);
+        window.levelTimerInterval = null;
     }
 
     return true;
@@ -1050,9 +1168,6 @@ function showVictoryPopup(levelId) {
 function showNextLevelButton(nextLevelId) {
     if (document.getElementById('btnNextLevel')) return;
 
-    const toolbar = document.querySelector('.toolbar');
-    if (!toolbar) return;
-
     const nextBtn = document.createElement('button');
     nextBtn.id = 'btnNextLevel';
     nextBtn.className = 'btn primary';
@@ -1062,10 +1177,17 @@ function showNextLevelButton(nextLevelId) {
     };
 
     const checkBtn = document.getElementById('btnCheck');
-    if (checkBtn) {
-        toolbar.insertBefore(nextBtn, checkBtn);
+    if (checkBtn && checkBtn.parentElement) {
+        // Insert before btnCheck's direct parent container (the flex div holding the timer+button)
+        const topToolbar = document.getElementById('topToolbar');
+        if (topToolbar) {
+            topToolbar.insertBefore(nextBtn, checkBtn.parentElement);
+        } else {
+            checkBtn.parentElement.insertBefore(nextBtn, checkBtn);
+        }
     } else {
-        toolbar.appendChild(nextBtn);
+        const topToolbar = document.getElementById('topToolbar');
+        if (topToolbar) topToolbar.appendChild(nextBtn);
     }
 }
 
@@ -1103,6 +1225,28 @@ function renderWin(levelId) {
     });
 }
 
+function renderLeaderboard() {
+    app.innerHTML = `
+    <section class="panel">
+      <div style="text-align: center; padding: 40px;">
+        <p style="font-size: 20px; margin-bottom: 20px;">Open the leaderboard with the 🏆 button at the top right</p>
+        <button class="btn primary" id="btnOpenLeaderboard">Open Leaderboard</button>
+        <button class="btn" id="btnBackToLevels">← Back to Levels</button>
+      </div>
+    </section>
+  `;
+
+    document.getElementById("btnOpenLeaderboard").addEventListener("click", () => {
+        if (window.leaderboardUI) {
+            window.leaderboardUI.open();
+        }
+    });
+
+    document.getElementById("btnBackToLevels").addEventListener("click", () => {
+        location.hash = "#levels";
+    });
+}
+
 function renderLose(levelId, progress) {
     if (!isUnlocked(levelId, progress)) {
         location.hash = "#levels";
@@ -1130,24 +1274,6 @@ function renderLose(levelId, progress) {
     });
 }
 
-function renderLeaderboard() {
-    app.innerHTML = `
-    <section class="panel">
-      <div style="text-align: center; padding: 40px;">
-        <p style="font-size: 20px; margin-bottom: 20px;">Open the leaderboard with the 🏆 button at the top right</p>
-        <button class="btn primary" id="btnOpenLeaderboard">Open Leaderboard</button>
-        <button class="btn" id="btnBackToLevels">← Back to Levels</button>
-      </div>
-    </section>
-  `;
+//
 
-    document.getElementById("btnOpenLeaderboard").addEventListener("click", () => {
-        if (window.leaderboardUI) {
-            window.leaderboardUI.open();
-        }
-    });
-
-    document.getElementById("btnBackToLevels").addEventListener("click", () => {
-        location.hash = "#levels";
-    });
-}
+//

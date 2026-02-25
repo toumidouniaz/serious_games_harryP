@@ -211,7 +211,7 @@ io.on('connection', (socket) => {
 
             if (allReady || room.players.size === 1) {
                 // Déterminer le niveau de départ demandé par l'hôte
-                const TOTAL_LEVELS = 12; // Doit correspondre au nombre de niveaux côté client
+                const TOTAL_LEVELS = 17; // Doit correspondre au nombre de niveaux côté client
                 let requested = Number.isFinite(Number(data.requestedStartLevel)) ? parseInt(data.requestedStartLevel, 10) : NaN;
                 if (!Number.isFinite(requested)) requested = 1;
                 const chosenLevel = Math.min(Math.max(requested, 1), TOTAL_LEVELS);
